@@ -212,7 +212,9 @@ export default function Header({ currentPlan }: HeaderProps) {
                   aria-current={plan === currentPlan ? "true" : undefined}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="whitespace-nowrap">{planLabels[plan]}</span>
+                    <span className="whitespace-nowrap">
+                      {planLabels[plan]}
+                    </span>
                     {plan === currentPlan && (
                       <span className="rounded-full bg-white/16 px-2 py-0.5 text-[10px] font-bold text-white">
                         利用中
