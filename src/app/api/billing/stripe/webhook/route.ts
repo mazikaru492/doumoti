@@ -10,11 +10,31 @@ import {
 export const runtime = "nodejs";
 
 type StripeEvent = {
+  id?: string;
   type: string;
   data: {
     object: Record<string, unknown>;
   };
 };
+
+const processedEventTimestamps = new Map<string, number>();
+
+function hasProcessedEvent(eventId: string): boolean {
+  const now = Date.now();
+
+  // Keep a rolling 24h dedupe window to limit replay and memory growth.
+  for (const [id, timestamp] of processedEventTimestamps.entries()) {
+    if (now - timestamp > 24 * 60 * 60 * 1000) {
+      processedEventTimestamps.delete(id);
+    }
+  }
+
+  if (processedEventTimestamps.has(eventId)) {
+    return true;
+  }
+  processedEventTimestamps.set(eventId, now);
+  return false;
+}
 
 type StripeSubscriptionObject = {
   customer?: unknown;
@@ -45,7 +65,12 @@ export async function POST(request: NextRequest) {
   const rawBody = await request.text();
   const stripeSignature = request.headers.get("stripe-signature");
 
-  if (!stripeSignature || !verifyStripeSignature(rawBody, stripeSignature)) {
+  if (
+    !stripeSignature ||
+    !verifyStripeSignature(rawBody, stripeSignature, {
+      toleranceSeconds: 300,
+    })
+  ) {
     return NextResponse.json(
       { error: "Invalid Stripe signature" },
       { status: 400 },
@@ -60,6 +85,10 @@ export async function POST(request: NextRequest) {
       { error: "Invalid JSON payload" },
       { status: 400 },
     );
+  }
+
+  if (typeof event.id === "string" && hasProcessedEvent(event.id)) {
+    return NextResponse.json({ received: true, deduplicated: true });
   }
 
   if (event.type === "checkout.session.completed") {

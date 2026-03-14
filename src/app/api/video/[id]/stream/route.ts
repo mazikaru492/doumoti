@@ -51,6 +51,17 @@ export async function GET(request: NextRequest, { params }: Params) {
     );
   }
 
+  if (
+    claims.plan === "normal" &&
+    typeof claims.previewWindowEndSec === "number" &&
+    Math.floor(Date.now() / 1000) >= claims.previewWindowEndSec
+  ) {
+    return NextResponse.json(
+      { error: "Preview window expired" },
+      { status: 403 },
+    );
+  }
+
   const upstreamSource = resolvePlayableSource(id, claims.quality);
 
   return NextResponse.redirect(upstreamSource, {

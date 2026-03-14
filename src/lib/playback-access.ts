@@ -17,6 +17,7 @@ type PlaybackClaims = {
   quality: PlaybackQuality;
   plan: SubscriptionPlan;
   previewLimitSec?: number;
+  previewWindowEndSec?: number;
 };
 
 type AdSession = {
@@ -24,10 +25,12 @@ type AdSession = {
   userId: string;
   videoId: string;
   createdAt: number;
+  expiresAt: number;
   consumed: boolean;
 };
 
 const adSessionStore = new Map<string, AdSession>();
+const previewWindowStore = new Map<string, { endsAtSec: number }>();
 
 function streamCatalog(videoId: string): { sd: string; hd: string } {
   const video = getVideoById(videoId);
@@ -47,9 +50,12 @@ export function issuePlaybackToken(params: {
   videoId: string;
   plan: SubscriptionPlan;
   quality: PlaybackQuality;
+  ttlSeconds?: number;
+  previewWindowEndSec?: number;
 }): { token: string; expiresAt: number } {
   const now = Math.floor(Date.now() / 1000);
-  const ttlSeconds = params.plan === "normal" ? 60 : 60 * 10;
+  const ttlSeconds =
+    params.ttlSeconds ?? (params.plan === "normal" ? 60 : 60 * 10);
   const previewLimitSec =
     params.plan === "normal" ? NORMAL_PREVIEW_SECONDS : undefined;
 
@@ -60,6 +66,7 @@ export function issuePlaybackToken(params: {
       plan: params.plan,
       quality: params.quality,
       previewLimitSec,
+      previewWindowEndSec: params.previewWindowEndSec,
     },
     {
       ttlSeconds,
@@ -122,6 +129,7 @@ export function buildEntitlement(params: {
       userId: params.userId,
       videoId: params.videoId,
       createdAt: Date.now(),
+      expiresAt: Date.now() + 5 * 60 * 1000,
       consumed: false,
     });
 
@@ -139,13 +147,23 @@ export function buildEntitlement(params: {
 
   const sources: Partial<
     Record<PlaybackQuality, { url: string; expiresAt: number }>
-  > = {
-    sd: buildSignedSource(params.userId, params.videoId, plan, "sd"),
-    hd: buildSignedSource(params.userId, params.videoId, plan, "hd"),
-  };
+  > = {};
 
-  if (!canAccessHighQuality(plan)) {
-    delete sources.hd;
+  const sdSource = buildSignedSource(params.userId, params.videoId, plan, "sd");
+  if (sdSource) {
+    sources.sd = sdSource;
+  }
+
+  if (canAccessHighQuality(plan)) {
+    const hdSource = buildSignedSource(
+      params.userId,
+      params.videoId,
+      plan,
+      "hd",
+    );
+    if (hdSource) {
+      sources.hd = hdSource;
+    }
   }
 
   return {
@@ -180,6 +198,9 @@ export function grantAdSessionPlayback(params: {
   ) {
     return null;
   }
+  if (Date.now() > adSession.expiresAt) {
+    return null;
+  }
 
   const minimumWatchMs = params.minimumWatchMs ?? 8000;
   const elapsed = Date.now() - adSession.createdAt;
@@ -200,9 +221,32 @@ function buildSignedSource(
   videoId: string,
   plan: SubscriptionPlan,
   quality: PlaybackQuality,
-): { url: string; expiresAt: number } {
+): { url: string; expiresAt: number } | null {
   if (quality === "hd" && !canAccessHighQuality(plan)) {
     throw new Error("forbidden-quality");
+  }
+
+  const nowSec = Math.floor(Date.now() / 1000);
+  let ttlSeconds: number | undefined;
+  let previewWindowEndSec: number | undefined;
+
+  if (plan === "normal") {
+    const key = `${userId}:${videoId}`;
+    const existingWindow = previewWindowStore.get(key);
+    const endsAtSec =
+      existingWindow?.endsAtSec ?? nowSec + NORMAL_PREVIEW_SECONDS;
+
+    if (!existingWindow) {
+      previewWindowStore.set(key, { endsAtSec });
+    }
+
+    const remainingSec = endsAtSec - nowSec;
+    if (remainingSec <= 0) {
+      return null;
+    }
+
+    previewWindowEndSec = endsAtSec;
+    ttlSeconds = Math.min(remainingSec, 60);
   }
 
   const { token, expiresAt } = issuePlaybackToken({
@@ -210,6 +254,8 @@ function buildSignedSource(
     videoId,
     plan,
     quality,
+    ttlSeconds,
+    previewWindowEndSec,
   });
 
   return {

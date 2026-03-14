@@ -9,6 +9,11 @@ interface Params {
 }
 
 export async function POST(request: NextRequest, { params }: Params) {
+  const origin = request.headers.get("origin");
+  if (origin && origin !== request.nextUrl.origin) {
+    return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
+  }
+
   const auth = getAuthContextFromRequest(request);
   if (auth.plan !== "general") {
     return NextResponse.json(

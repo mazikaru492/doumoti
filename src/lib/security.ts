@@ -102,22 +102,39 @@ export function verifyClaims<T extends Record<string, unknown>>(
 export function verifyStripeSignature(
   payload: string,
   stripeSignature: string,
+  options?: {
+    toleranceSeconds?: number;
+    nowSeconds?: number;
+  },
 ): boolean {
-  const parts = stripeSignature
+  const segments = stripeSignature
     .split(",")
     .map((part) => part.trim())
-    .reduce<Record<string, string>>((acc, part) => {
+    .filter(Boolean)
+    .map((part) => {
       const [key, value] = part.split("=");
-      if (key && value) {
-        acc[key] = value;
-      }
-      return acc;
-    }, {});
+      return { key, value };
+    });
 
-  const timestamp = parts.t;
-  const signature = parts.v1;
+  const timestampRaw = segments.find((segment) => segment.key === "t")?.value;
+  const signatures = segments
+    .filter(
+      (segment) => segment.key === "v1" && typeof segment.value === "string",
+    )
+    .map((segment) => segment.value as string);
 
-  if (!timestamp || !signature) {
+  if (!timestampRaw || signatures.length === 0) {
+    return false;
+  }
+
+  const timestamp = Number.parseInt(timestampRaw, 10);
+  if (!Number.isFinite(timestamp)) {
+    return false;
+  }
+
+  const toleranceSeconds = options?.toleranceSeconds ?? 300;
+  const nowSeconds = options?.nowSeconds ?? Math.floor(Date.now() / 1000);
+  if (Math.abs(nowSeconds - timestamp) > toleranceSeconds) {
     return false;
   }
 
@@ -127,5 +144,5 @@ export function verifyStripeSignature(
     .update(signedPayload)
     .digest("hex");
 
-  return safeEqual(signature, expected);
+  return signatures.some((signature) => safeEqual(signature, expected));
 }
