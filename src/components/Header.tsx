@@ -24,6 +24,13 @@ export default function Header({ currentPlan }: HeaderProps) {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  useEffect(() => {
+    document.body.style.overflow = isMobileMenuOpen ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isMobileMenuOpen]);
+
   const navLinks = [
     { href: "/", label: "ホーム" },
     { href: "/#action", label: "アクション" },
@@ -45,6 +52,12 @@ export default function Header({ currentPlan }: HeaderProps) {
     general:
       "border border-white/28 bg-white/[0.04] text-[#e9e9e9] hover:border-white/55 hover:bg-white/[0.12]",
     vip: "border border-[#8f1e56] bg-[#8f1e56] text-white hover:bg-[#a72666] hover:border-[#a72666] shadow-[0_6px_18px_rgba(143,30,86,0.45)]",
+  };
+
+  const currentPlanBadgeStyles: Record<SubscriptionPlan, string> = {
+    normal: "border-white/25 bg-[#2a2a2a] text-[#ececec]",
+    general: "border-white/30 bg-[#3a3a3a] text-white",
+    vip: "border-[#b04a7a] bg-[#8f1e56] text-white",
   };
 
   return (
@@ -75,7 +88,7 @@ export default function Header({ currentPlan }: HeaderProps) {
                     D
                   </span>
                 </div>
-                <span className="hidden text-[24px] font-bold leading-none tracking-[-0.01em] text-[#d54a89] sm:block">
+                <span className="text-[20px] font-bold leading-none tracking-[-0.01em] text-[#d54a89] sm:text-[24px]">
                   Doumoti
                 </span>
               </Link>
@@ -101,7 +114,7 @@ export default function Header({ currentPlan }: HeaderProps) {
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3">
-              <div className="group hidden h-10 items-center rounded-full border border-white/16 bg-[#0e0e0e] pl-3 pr-4 transition-all duration-300 hover:border-white/35 focus-within:border-white/60 sm:flex">
+              <div className="group hidden h-10 items-center rounded-full border border-white/16 bg-[#0e0e0e] pl-3 pr-4 transition-all duration-300 hover:border-white/35 focus-within:border-white/60 md:flex">
                 <Search
                   className="h-4 w-4 shrink-0 text-white/70"
                   aria-hidden="true"
@@ -139,21 +152,31 @@ export default function Header({ currentPlan }: HeaderProps) {
               <button
                 type="button"
                 aria-label="プロフィール"
-                className="hidden h-9 w-9 items-center justify-center overflow-hidden rounded-md border border-white/22 bg-gradient-to-br from-[#2a2a2a] to-[#171717] text-white shadow-[0_4px_12px_rgba(0,0,0,0.45)] transition-all duration-200 hover:border-white/45 hover:brightness-110 sm:flex"
+                className="hidden h-9 w-9 items-center justify-center overflow-hidden rounded-md border border-white/22 bg-gradient-to-br from-[#2a2a2a] to-[#171717] text-white shadow-[0_4px_12px_rgba(0,0,0,0.45)] transition-all duration-200 hover:border-white/45 hover:brightness-110 md:flex"
               >
                 <UserRound className="h-[18px] w-[18px]" />
               </button>
 
               <button
+                type="button"
+                aria-label="検索"
+                className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-[#111111] text-white transition-colors hover:border-white/40 md:hidden"
+              >
+                <Search className="h-5 w-5" />
+              </button>
+
+              <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="p-1 text-white md:hidden"
-                aria-label="メニュー"
+                className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-[#111111] text-white transition-colors hover:border-white/40 md:hidden"
+                aria-label={
+                  isMobileMenuOpen ? "メニューを閉じる" : "メニューを開く"
+                }
                 type="button"
               >
                 {isMobileMenuOpen ? (
-                  <X className="h-6 w-6" />
+                  <X className="h-5 w-5" />
                 ) : (
-                  <Menu className="h-6 w-6" />
+                  <Menu className="h-5 w-5" />
                 )}
               </button>
             </div>
@@ -166,75 +189,116 @@ export default function Header({ currentPlan }: HeaderProps) {
         />
       </div>
 
-      {isMobileMenuOpen && (
-        <div className="border-b border-white/15 bg-[#101010] md:hidden">
-          <nav
-            className="flex flex-col gap-1 p-4"
-            aria-label="モバイルメニュー"
-          >
+      <div
+        className={`fixed inset-0 z-40 bg-black/60 transition-opacity duration-300 md:hidden ${
+          isMobileMenuOpen
+            ? "pointer-events-auto opacity-100"
+            : "pointer-events-none opacity-0"
+        }`}
+        onClick={() => setIsMobileMenuOpen(false)}
+        aria-hidden="true"
+      />
+
+      <aside
+        className={`fixed right-0 top-0 z-50 h-dvh w-[88%] max-w-[360px] border-l border-white/10 bg-[#0d0d0d] md:hidden transform transition-transform duration-300 ${
+          isMobileMenuOpen ? "translate-x-0" : "translate-x-full"
+        }`}
+        aria-label="モバイルメニュー"
+        aria-hidden={!isMobileMenuOpen}
+      >
+        <div className="flex h-full flex-col">
+          <div className="flex min-h-16 items-center justify-between border-b border-white/10 px-4">
+            <div className="flex min-h-11 items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-gradient-to-br from-[#2a2a2a] to-[#171717] text-white">
+                <UserRound className="h-5 w-5" />
+              </div>
+              <div className="flex min-h-11 flex-col justify-center">
+                <p className="text-[11px] font-semibold tracking-[0.08em] text-white/55">
+                  CURRENT PLAN
+                </p>
+                <span
+                  className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-bold ${currentPlanBadgeStyles[currentPlan]}`}
+                >
+                  {currentPlan === "normal"
+                    ? "Normal"
+                    : currentPlan === "general"
+                      ? "General"
+                      : "VIP"}
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-[#151515] text-white"
+              aria-label="メニューを閉じる"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          <nav className="px-4 pb-4 pt-3" aria-label="モバイルナビゲーション">
             {navLinks.map((link, index) => (
               <Link
                 key={link.href}
                 href={link.href}
                 onClick={() => setIsMobileMenuOpen(false)}
-                className={`rounded-lg px-3 py-2.5 text-sm tracking-wide transition-colors ${
+                className={`mb-1 flex min-h-11 items-center rounded-xl px-4 text-[17px] transition-colors ${
                   index === 0
-                    ? "font-bold text-white"
-                    : "font-medium text-white/90 hover:bg-white/10 hover:text-white"
+                    ? "bg-white/10 font-bold text-white"
+                    : "font-semibold text-white/92 hover:bg-white/10"
                 }`}
               >
                 {link.label}
               </Link>
             ))}
+          </nav>
 
-            <div className="mt-2 flex items-center gap-2 rounded-lg border border-white/20 bg-[#141414] px-3 py-2">
+          <div className="mx-4 h-px bg-white/10" />
+
+          <section className="flex-1 overflow-y-auto px-4 pb-6 pt-4">
+            <div className="mb-3 flex min-h-11 items-center rounded-lg border border-white/14 bg-[#141414] px-3">
               <Search className="h-4 w-4 text-white/65" aria-hidden="true" />
               <input
                 type="search"
                 placeholder="タイトルで検索..."
                 aria-label="タイトルで検索"
-                className="w-full bg-transparent text-sm font-medium text-white placeholder:text-[#b3b3b3] outline-none"
+                className="ml-2 w-full bg-transparent text-sm font-medium text-white placeholder:text-[#b3b3b3] outline-none"
               />
             </div>
 
-            <div className="mt-3 grid grid-cols-1 gap-2">
-              <div className="mb-1 rounded-lg border border-white/15 bg-[#121212] px-3 py-2 text-xs text-white/80">
-                現在のプラン:{" "}
-                <span className="font-bold text-white">
-                  {planLabels[currentPlan]}
-                </span>
-              </div>
+            <h3 className="mb-2 text-[12px] font-bold tracking-[0.09em] text-white/60">
+              SUBSCRIPTION / PLANS
+            </h3>
+
+            <div className="space-y-2">
               {plans.map((plan) => (
                 <div
                   key={plan}
-                  className={`rounded-lg px-3 py-2 text-left text-sm font-semibold transition-all duration-200 ${planButtonStyles[plan]} ${plan === currentPlan ? "ring-1 ring-white/40" : "opacity-80"}`}
+                  className={`flex min-h-11 items-center justify-between rounded-xl px-4 py-2 text-left text-sm font-semibold transition-all duration-200 ${
+                    plan === "vip"
+                      ? "border border-[#8f1e56] bg-[#8f1e56] text-white shadow-[0_8px_20px_rgba(143,30,86,0.35)]"
+                      : planButtonStyles[plan]
+                  } ${plan === currentPlan ? "ring-1 ring-white/45" : "opacity-90"}`}
                   aria-label={`${planLabels[plan]}${plan === currentPlan ? " 利用中" : ""}`}
                   aria-current={plan === currentPlan ? "true" : undefined}
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="whitespace-nowrap">
-                      {planLabels[plan]}
+                  <span>{planLabels[plan]}</span>
+                  {plan === currentPlan ? (
+                    <span className="rounded-full bg-white/16 px-2 py-0.5 text-[10px] font-bold text-white">
+                      利用中
                     </span>
-                    {plan === currentPlan && (
-                      <span className="rounded-full bg-white/16 px-2 py-0.5 text-[10px] font-bold text-white">
-                        利用中
-                      </span>
-                    )}
-                  </div>
+                  ) : (
+                    <span className="text-xs font-bold text-white/70">
+                      選択
+                    </span>
+                  )}
                 </div>
               ))}
             </div>
-
-            <button
-              type="button"
-              aria-label="プロフィール"
-              className="mt-2 flex h-10 w-10 items-center justify-center rounded-md border border-white/22 bg-gradient-to-br from-[#2a2a2a] to-[#171717] text-white"
-            >
-              <UserRound className="h-5 w-5" />
-            </button>
-          </nav>
+          </section>
         </div>
-      )}
+      </aside>
     </header>
   );
 }
