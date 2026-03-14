@@ -38,7 +38,9 @@ export default function VideoPlayer({ src, poster, title }: VideoPlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const hlsRef = useRef<Hls | null>(null);
   const progressRef = useRef<HTMLDivElement>(null);
-  const hideControlsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hideControlsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -65,9 +67,6 @@ export default function VideoPlayer({ src, poster, title }: VideoPlayerProps) {
     const video = videoRef.current;
     if (!video) return;
 
-    setHasError(false);
-    setErrorMessage("");
-
     const isHls = src.includes(".m3u8");
 
     if (isHls && Hls.isSupported()) {
@@ -90,7 +89,9 @@ export default function VideoPlayer({ src, poster, title }: VideoPlayerProps) {
         if (data.fatal) {
           switch (data.type) {
             case Hls.ErrorTypes.NETWORK_ERROR:
-              setErrorMessage("ネットワークエラー: 動画サーバーに接続できません");
+              setErrorMessage(
+                "ネットワークエラー: 動画サーバーに接続できません",
+              );
               // ネットワークエラー時は自動リカバリを試行
               hls.startLoad();
               break;
@@ -174,7 +175,7 @@ export default function VideoPlayer({ src, poster, title }: VideoPlayerProps) {
     if (isPlaying) {
       hideControlsTimerRef.current = setTimeout(
         () => setShowControls(false),
-        3000
+        3000,
       );
     }
   }, [isPlaying]);
@@ -377,7 +378,9 @@ export default function VideoPlayer({ src, poster, title }: VideoPlayerProps) {
             <button
               onClick={toggleFullscreen}
               className="text-white hover:text-primary-light transition-colors"
-              aria-label={isFullscreen ? "フルスクリーン解除" : "フルスクリーン"}
+              aria-label={
+                isFullscreen ? "フルスクリーン解除" : "フルスクリーン"
+              }
             >
               {isFullscreen ? (
                 <Minimize className="w-5 h-5" />

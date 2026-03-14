@@ -2,8 +2,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Star, Eye, Calendar, Clock, ArrowLeft, Play } from "lucide-react";
-import VideoPlayer from "@/components/VideoPlayer";
-import VideoCard from "@/components/VideoCard";
+import SecurePlaybackPanel from "@/components/SecurePlaybackPanel";
 import {
   getVideoById,
   getVideosByGenre,
@@ -34,7 +33,7 @@ export default async function VideoPage({ params }: VideoPageProps) {
 
   // 同ジャンルの関連動画（自分自身を除外）
   const relatedVideos = getVideosByGenre(video.genre).filter(
-    (v) => v.id !== video.id
+    (v) => v.id !== video.id,
   );
 
   // 関連動画が少ない場合、他のジャンルの人気動画で補完
@@ -42,7 +41,10 @@ export default async function VideoPage({ params }: VideoPageProps) {
   const additionalVideos =
     relatedVideos.length < 4
       ? allVideos
-          .filter((v) => v.id !== video.id && !relatedVideos.find((r) => r.id === v.id))
+          .filter(
+            (v) =>
+              v.id !== video.id && !relatedVideos.find((r) => r.id === v.id),
+          )
           .sort((a, b) => b.views - a.views)
           .slice(0, 4 - relatedVideos.length)
       : [];
@@ -62,12 +64,8 @@ export default async function VideoPage({ params }: VideoPageProps) {
           ホームに戻る
         </Link>
 
-        {/* VideoPlayer */}
-        <VideoPlayer
-          src={video.videoUrl}
-          poster={video.thumbnailUrl}
-          title={video.title}
-        />
+        {/* BFF経由の再生パネル */}
+        <SecurePlaybackPanel videoId={video.id} />
       </div>
 
       {/* 動画メタデータ */}

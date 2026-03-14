@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Search, Menu, X } from "lucide-react";
+import SubscriptionDebugLogin from "@/components/SubscriptionDebugLogin";
 
 /**
  * Header — グローバルナビゲーション
@@ -65,6 +66,8 @@ export default function Header() {
 
           {/* 右側: 検索 + モバイルメニュー */}
           <div className="flex items-center gap-3">
+            <SubscriptionDebugLogin />
+
             {/* 検索バー (UIのみ) */}
             <div className="hidden sm:flex items-center bg-surface-light/50 border border-border/50 rounded-full px-3 py-1.5 gap-2 focus-within:border-primary/50 transition-colors">
               <Search className="w-4 h-4 text-muted" />
