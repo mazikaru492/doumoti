@@ -247,6 +247,10 @@ export default function SecurePlaybackPanel({
           src={currentSource}
           poster={data.video.thumbnailUrl}
           title={data.video.title}
+          previewLimitSeconds={data.entitlement.maxPreviewSeconds}
+          onUpgradeClick={() => {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
         />
       ) : (
         <div className="text-sm text-muted py-8">

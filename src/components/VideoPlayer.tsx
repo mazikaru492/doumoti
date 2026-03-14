@@ -21,6 +21,10 @@ interface VideoPlayerProps {
   poster?: string;
   /** 動画タイトル（アクセシビリティ用） */
   title?: string;
+  /** プレビュー制限秒数（指定時は終了時にアップグレード導線を表示） */
+  previewLimitSeconds?: number | null;
+  /** アップグレード導線のクリック時処理 */
+  onUpgradeClick?: () => void;
 }
 
 /**
@@ -33,7 +37,13 @@ interface VideoPlayerProps {
  * - crossOrigin="anonymous" で CORS 対応
  * - バッファリング/エラー状態を検知し、ユーザーフレンドリーなUIを表示
  */
-export default function VideoPlayer({ src, poster, title }: VideoPlayerProps) {
+export default function VideoPlayer({
+  src,
+  poster,
+  title,
+  previewLimitSeconds = null,
+  onUpgradeClick,
+}: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const hlsRef = useRef<Hls | null>(null);
@@ -53,6 +63,7 @@ export default function VideoPlayer({ src, poster, title }: VideoPlayerProps) {
   const [duration, setDuration] = useState("0:00");
   const [showControls, setShowControls] = useState(true);
   const [volume, setVolume] = useState(1);
+  const [showPreviewEndedOverlay, setShowPreviewEndedOverlay] = useState(false);
 
   // 時間表示フォーマッター
   const formatTime = (seconds: number): string => {
@@ -138,6 +149,7 @@ export default function VideoPlayer({ src, poster, title }: VideoPlayerProps) {
     };
 
     const onLoadedMetadata = () => {
+      setShowPreviewEndedOverlay(false);
       setDuration(formatTime(video.duration));
     };
 
@@ -147,7 +159,12 @@ export default function VideoPlayer({ src, poster, title }: VideoPlayerProps) {
       setIsPlaying(true);
     };
     const onPause = () => setIsPlaying(false);
-    const onEnded = () => setIsPlaying(false);
+    const onEnded = () => {
+      setIsPlaying(false);
+      if (previewLimitSeconds && previewLimitSeconds > 0) {
+        setShowPreviewEndedOverlay(true);
+      }
+    };
 
     video.addEventListener("timeupdate", onTimeUpdate);
     video.addEventListener("loadedmetadata", onLoadedMetadata);
@@ -164,7 +181,7 @@ export default function VideoPlayer({ src, poster, title }: VideoPlayerProps) {
       video.removeEventListener("pause", onPause);
       video.removeEventListener("ended", onEnded);
     };
-  }, []);
+  }, [previewLimitSeconds]);
 
   // コントロールの自動非表示
   const resetHideTimer = useCallback(() => {
@@ -187,6 +204,11 @@ export default function VideoPlayer({ src, poster, title }: VideoPlayerProps) {
   const togglePlay = () => {
     const video = videoRef.current;
     if (!video) return;
+
+    if (showPreviewEndedOverlay) {
+      return;
+    }
+
     if (video.paused) {
       video.play().catch(() => {});
     } else {
@@ -241,6 +263,7 @@ export default function VideoPlayer({ src, poster, title }: VideoPlayerProps) {
   const retry = () => {
     setHasError(false);
     setErrorMessage("");
+    setShowPreviewEndedOverlay(false);
     const video = videoRef.current;
     if (video) {
       video.load();
@@ -292,8 +315,25 @@ export default function VideoPlayer({ src, poster, title }: VideoPlayerProps) {
         </div>
       )}
 
+      {/* プレビュー終了時のアップグレード導線 */}
+      {showPreviewEndedOverlay && !hasError && (
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-4 bg-black/85 px-4 text-center">
+          <p className="text-sm font-medium text-white">無料プランの視聴可能時間はここまでです</p>
+          <p className="max-w-sm text-xs leading-relaxed text-white/75">
+            続きを視聴するには、General または VIP プランにアップグレードしてください。
+          </p>
+          <button
+            type="button"
+            onClick={onUpgradeClick}
+            className="rounded-lg bg-[#ff2a7f] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#ff3d8d]"
+          >
+            プランをアップグレード
+          </button>
+        </div>
+      )}
+
       {/* 中央の再生ボタン（一時停止中のみ表示） */}
-      {!isPlaying && !hasError && !isBuffering && (
+      {!isPlaying && !hasError && !isBuffering && !showPreviewEndedOverlay && (
         <div
           className="absolute inset-0 flex items-center justify-center z-10 cursor-pointer"
           onClick={togglePlay}
@@ -307,7 +347,7 @@ export default function VideoPlayer({ src, poster, title }: VideoPlayerProps) {
       {/* コントロールバー */}
       <div
         className={`absolute bottom-0 left-0 right-0 z-20 transition-all duration-300 ${
-          showControls
+          showControls && !showPreviewEndedOverlay
             ? "opacity-100 translate-y-0"
             : "opacity-0 translate-y-2 pointer-events-none"
         }`}
