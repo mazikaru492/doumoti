@@ -114,29 +114,24 @@ export default function Header({ currentPlan }: HeaderProps) {
                 />
               </div>
 
-              <div className="hidden items-center gap-2 rounded-full border border-white/15 bg-[#0f0f0f] px-3 py-1.5 md:flex">
-                <span className="text-[11px] font-semibold tracking-wide text-white/65">
+              <div className="hidden shrink-0 items-center gap-2 rounded-full border border-white/15 bg-[#0f0f0f] px-3 py-1.5 lg:flex">
+                <span className="whitespace-nowrap text-[11px] font-semibold tracking-wide text-white/65">
                   現在のプラン
                 </span>
-                <span className="text-xs font-bold text-white">
+                <span className="whitespace-nowrap text-xs font-bold text-white">
                   {planLabels[currentPlan]}
                 </span>
               </div>
 
-              <div className="hidden items-center gap-2 lg:flex">
+              <div className="hidden items-center gap-1 xl:flex">
                 {plans.map((plan) => (
                   <div
                     key={plan}
-                    className={`h-9 rounded-full px-3 text-[12px] font-semibold tracking-[0.01em] transition-all duration-200 flex items-center gap-2 ${planButtonStyles[plan]} ${plan === currentPlan ? "ring-1 ring-white/40" : "opacity-80"}`}
+                    className={`flex h-9 shrink-0 items-center whitespace-nowrap rounded-full px-3 text-[11px] font-semibold tracking-[0.01em] transition-all duration-200 ${planButtonStyles[plan]} ${plan === currentPlan ? "ring-1 ring-white/40" : "opacity-80"}`}
                     aria-label={`${planLabels[plan]}${plan === currentPlan ? " 利用中" : ""}`}
                     aria-current={plan === currentPlan ? "true" : undefined}
                   >
                     <span>{planLabels[plan]}</span>
-                    {plan === currentPlan && (
-                      <span className="rounded-full bg-white/16 px-2 py-0.5 text-[10px] font-bold text-white">
-                        利用中
-                      </span>
-                    )}
                   </div>
                 ))}
               </div>
@@ -217,7 +212,7 @@ export default function Header({ currentPlan }: HeaderProps) {
                   aria-current={plan === currentPlan ? "true" : undefined}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span>{planLabels[plan]}</span>
+                    <span className="whitespace-nowrap">{planLabels[plan]}</span>
                     {plan === currentPlan && (
                       <span className="rounded-full bg-white/16 px-2 py-0.5 text-[10px] font-bold text-white">
                         利用中
