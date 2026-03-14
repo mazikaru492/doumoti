@@ -318,9 +318,12 @@ export default function VideoPlayer({
       {/* プレビュー終了時のアップグレード導線 */}
       {showPreviewEndedOverlay && !hasError && (
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-4 bg-black/85 px-4 text-center">
-          <p className="text-sm font-medium text-white">無料プランの視聴可能時間はここまでです</p>
+          <p className="text-sm font-medium text-white">
+            無料プランの視聴可能時間はここまでです
+          </p>
           <p className="max-w-sm text-xs leading-relaxed text-white/75">
-            続きを視聴するには、General または VIP プランにアップグレードしてください。
+            続きを視聴するには、General または VIP
+            プランにアップグレードしてください。
           </p>
           <button
             type="button"
