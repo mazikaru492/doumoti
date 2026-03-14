@@ -3,16 +3,18 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Search, Menu, X, UserRound } from "lucide-react";
+import { type SubscriptionPlan } from "@/lib/subscription";
 
 /**
  * Header — Netflixライクなグローバルナビゲーション
  */
-export default function Header() {
+interface HeaderProps {
+  currentPlan: SubscriptionPlan;
+}
+
+export default function Header({ currentPlan }: HeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [loadingPlanUserId, setLoadingPlanUserId] = useState<string | null>(
-    null,
-  );
 
   useEffect(() => {
     const handleScroll = () => {
@@ -30,34 +32,14 @@ export default function Header() {
     { href: "/#romance", label: "ロマンス" },
   ];
 
-  const plans = [
-    { userId: "demo-normal", plan: "normal", label: "Normal (無料)" },
-    { userId: "demo-general", plan: "general", label: "General (1600円/月)" },
-    { userId: "demo-vip", plan: "vip", label: "VIP (2600円/月)" },
-  ] as const;
-
-  const loginPlan = async (userId: string, plan: string) => {
-    setLoadingPlanUserId(userId);
-    try {
-      const response = await fetch("/api/auth/dev-login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ userId, plan }),
-      });
-
-      if (!response.ok) {
-        return;
-      }
-
-      window.location.reload();
-    } finally {
-      setLoadingPlanUserId(null);
-    }
+  const plans = ["normal", "general", "vip"] as const;
+  const planLabels: Record<SubscriptionPlan, string> = {
+    normal: "Normal (無料)",
+    general: "General (1600円/月)",
+    vip: "VIP (2600円/月)",
   };
 
-  const planButtonStyles: Record<(typeof plans)[number]["plan"], string> = {
+  const planButtonStyles: Record<SubscriptionPlan, string> = {
     normal:
       "border border-white/45 bg-transparent text-white hover:border-white hover:bg-white/[0.08]",
     general:
@@ -128,24 +110,34 @@ export default function Header() {
                   type="search"
                   placeholder="タイトルで検索..."
                   aria-label="タイトルで検索"
-                  className="ml-2 w-0 bg-transparent text-sm font-medium text-white placeholder:text-[#b3b3b3] opacity-90 outline-none transition-all duration-300 group-hover:w-36 group-focus-within:w-56"
+                  className="ml-2 w-28 bg-transparent text-sm font-medium text-white placeholder:text-[#b3b3b3] opacity-90 outline-none transition-all duration-300 sm:w-32 group-hover:w-44 group-focus-within:w-56"
                 />
               </div>
 
+              <div className="hidden items-center gap-2 rounded-full border border-white/15 bg-[#0f0f0f] px-3 py-1.5 md:flex">
+                <span className="text-[11px] font-semibold tracking-wide text-white/65">
+                  現在のプラン
+                </span>
+                <span className="text-xs font-bold text-white">
+                  {planLabels[currentPlan]}
+                </span>
+              </div>
+
               <div className="hidden items-center gap-2 lg:flex">
-                {plans.map((demo) => (
-                  <button
-                    key={demo.userId}
-                    onClick={() => loginPlan(demo.userId, demo.plan)}
-                    disabled={loadingPlanUserId !== null}
-                    className={`h-9 rounded-full px-3 text-[12px] font-semibold tracking-[0.01em] transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60 ${planButtonStyles[demo.plan]}`}
-                    type="button"
-                    aria-label={`${demo.label}に切り替え`}
+                {plans.map((plan) => (
+                  <div
+                    key={plan}
+                    className={`h-9 rounded-full px-3 text-[12px] font-semibold tracking-[0.01em] transition-all duration-200 flex items-center gap-2 ${planButtonStyles[plan]} ${plan === currentPlan ? "ring-1 ring-white/40" : "opacity-80"}`}
+                    aria-label={`${planLabels[plan]}${plan === currentPlan ? " 利用中" : ""}`}
+                    aria-current={plan === currentPlan ? "true" : undefined}
                   >
-                    {loadingPlanUserId === demo.userId
-                      ? "切替中..."
-                      : demo.label}
-                  </button>
+                    <span>{planLabels[plan]}</span>
+                    {plan === currentPlan && (
+                      <span className="rounded-full bg-white/16 px-2 py-0.5 text-[10px] font-bold text-white">
+                        利用中
+                      </span>
+                    )}
+                  </div>
                 ))}
               </div>
 
@@ -154,7 +146,7 @@ export default function Header() {
                 aria-label="プロフィール"
                 className="hidden h-9 w-9 items-center justify-center overflow-hidden rounded-md border border-white/22 bg-gradient-to-br from-[#2a2a2a] to-[#171717] text-white shadow-[0_4px_12px_rgba(0,0,0,0.45)] transition-all duration-200 hover:border-white/45 hover:brightness-110 sm:flex"
               >
-                <UserRound className="h-4.5 w-4.5" />
+                <UserRound className="h-[18px] w-[18px]" />
               </button>
 
               <button
@@ -211,17 +203,28 @@ export default function Header() {
             </div>
 
             <div className="mt-3 grid grid-cols-1 gap-2">
-              {plans.map((demo) => (
-                <button
-                  key={demo.userId}
-                  onClick={() => loginPlan(demo.userId, demo.plan)}
-                  disabled={loadingPlanUserId !== null}
-                  className={`rounded-lg px-3 py-2 text-left text-sm font-semibold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60 ${planButtonStyles[demo.plan]}`}
-                  type="button"
-                  aria-label={`${demo.label}に切り替え`}
+              <div className="mb-1 rounded-lg border border-white/15 bg-[#121212] px-3 py-2 text-xs text-white/80">
+                現在のプラン:{" "}
+                <span className="font-bold text-white">
+                  {planLabels[currentPlan]}
+                </span>
+              </div>
+              {plans.map((plan) => (
+                <div
+                  key={plan}
+                  className={`rounded-lg px-3 py-2 text-left text-sm font-semibold transition-all duration-200 ${planButtonStyles[plan]} ${plan === currentPlan ? "ring-1 ring-white/40" : "opacity-80"}`}
+                  aria-label={`${planLabels[plan]}${plan === currentPlan ? " 利用中" : ""}`}
+                  aria-current={plan === currentPlan ? "true" : undefined}
                 >
-                  {loadingPlanUserId === demo.userId ? "切替中..." : demo.label}
-                </button>
+                  <div className="flex items-center justify-between gap-2">
+                    <span>{planLabels[plan]}</span>
+                    {plan === currentPlan && (
+                      <span className="rounded-full bg-white/16 px-2 py-0.5 text-[10px] font-bold text-white">
+                        利用中
+                      </span>
+                    )}
+                  </div>
+                </div>
               ))}
             </div>
 
