@@ -3,9 +3,9 @@ import hashlib
 import json
 import logging
 import os
-import random
 import re
 import sys
+from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
@@ -322,6 +322,37 @@ def upsert_video(
         raise RuntimeError(f"Supabase upsert failed: {result.error}")
 
 
+async def acquire_rate_limit_slot(
+    starts: deque[float],
+    *,
+    max_downloads: int,
+    window_seconds: float,
+) -> None:
+    if max_downloads <= 0:
+        return
+
+    loop = asyncio.get_running_loop()
+
+    while True:
+        now = loop.time()
+
+        while starts and (now - starts[0]) >= window_seconds:
+            starts.popleft()
+
+        if len(starts) < max_downloads:
+            starts.append(now)
+            return
+
+        wait_seconds = max(window_seconds - (now - starts[0]), 0.1)
+        logger.info(
+            "Rate limit reached: %d downloads / %.0f sec. Waiting %.1f sec...",
+            max_downloads,
+            window_seconds,
+            wait_seconds,
+        )
+        await asyncio.sleep(wait_seconds)
+
+
 async def run() -> None:
     load_env()
 
@@ -330,14 +361,20 @@ async def run() -> None:
     stream_base_url = required_env("STREAM_BASE_URL")
 
     poll_seconds = float(os.getenv("TORRENT_POLL_SECONDS", "5"))
-    min_wait = float(os.getenv("TORRENT_MIN_WAIT_SECONDS", "1"))
-    max_wait = float(os.getenv("TORRENT_MAX_WAIT_SECONDS", "2"))
+    max_downloads_per_window = int(os.getenv("TORRENT_MAX_DOWNLOADS", "6"))
+    rate_window_seconds = float(os.getenv("TORRENT_RATE_WINDOW_SECONDS", "1800"))
 
     tasks = parse_tasks_file(tasks_path)
     supabase = create_supabase_admin_client()
     aria2 = create_aria2_client()
+    download_start_times: deque[float] = deque()
 
     logger.info("Loaded %d task(s)", len(tasks))
+    logger.info(
+        "Rate limit: max %d download starts per %.0f seconds",
+        max_downloads_per_window,
+        rate_window_seconds,
+    )
 
     imported = 0
     skipped = 0
@@ -358,6 +395,12 @@ async def run() -> None:
                 skipped += 1
                 logger.info("Skip: already registered (%s)", reason)
                 continue
+
+            await acquire_rate_limit_slot(
+                download_start_times,
+                max_downloads=max_downloads_per_window,
+                window_seconds=rate_window_seconds,
+            )
 
             download = add_to_aria2(aria2, task, download_dir)
             logger.info("Queued gid=%s", download.gid)
@@ -381,8 +424,6 @@ async def run() -> None:
 
             imported += 1
             logger.info("Imported gid=%s title=%s", completed.gid, task.title or meta.name)
-
-            await asyncio.sleep(random.uniform(min_wait, max_wait))
         except Exception as exc:  # noqa: BLE001
             failed += 1
             logger.exception("Task failed: %s", exc)
