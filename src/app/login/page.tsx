@@ -48,10 +48,7 @@ function explainAuthError(message: string): string {
     return "パスワードは8文字以上で入力してください。";
   }
 
-  if (
-    lowered.includes("email rate limit") ||
-    lowered.includes("rate limit")
-  ) {
+  if (lowered.includes("email rate limit") || lowered.includes("rate limit")) {
     return "メール送信が一時的に制限されています。1分ほど待ってから再送してください。";
   }
 
@@ -128,7 +125,9 @@ export default function LoginPage() {
     setNotice(null);
 
     if (!email.includes("@")) {
-      setError("再送には有効なメールアドレスが必要です。先に入力してください。");
+      setError(
+        "再送には有効なメールアドレスが必要です。先に入力してください。",
+      );
       return;
     }
 
