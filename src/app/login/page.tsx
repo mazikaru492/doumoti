@@ -7,6 +7,16 @@ import { getSupabaseBrowserClient } from "@/utils/supabase/client";
 
 type AuthMode = "signin" | "signup";
 
+function buildEmailRedirectTo(nextPath: string): string {
+  const configuredBaseUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  const baseUrl = configuredBaseUrl || window.location.origin;
+  const normalizedBaseUrl = baseUrl.endsWith("/")
+    ? baseUrl.slice(0, -1)
+    : baseUrl;
+
+  return `${normalizedBaseUrl}/auth/callback?next=${encodeURIComponent(nextPath)}`;
+}
+
 function validateInput(email: string, password: string): string | null {
   if (!email.includes("@")) {
     return "メールアドレスの形式が正しくありません。";
@@ -36,6 +46,20 @@ function explainAuthError(message: string): string {
 
   if (lowered.includes("password should be at least")) {
     return "パスワードは8文字以上で入力してください。";
+  }
+
+  if (
+    lowered.includes("email rate limit") ||
+    lowered.includes("rate limit")
+  ) {
+    return "メール送信が一時的に制限されています。1分ほど待ってから再送してください。";
+  }
+
+  if (
+    lowered.includes("redirect") &&
+    (lowered.includes("not allowed") || lowered.includes("invalid"))
+  ) {
+    return "認証リダイレクトURLが許可されていません。管理者にURL設定の確認を依頼してください。";
   }
 
   return "認証処理に失敗しました。時間をおいて再試行してください。";
@@ -94,9 +118,43 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [pending, setPending] = useState(false);
+  const [resending, setResending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const tabIndex = mode === "signin" ? 0 : 1;
+
+  async function handleResendConfirmation() {
+    setError(null);
+    setNotice(null);
+
+    if (!email.includes("@")) {
+      setError("再送には有効なメールアドレスが必要です。先に入力してください。");
+      return;
+    }
+
+    setResending(true);
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      const emailRedirectTo = buildEmailRedirectTo(nextPath);
+      const { error: resendError } = await supabase.auth.resend({
+        type: "signup",
+        email,
+        options: { emailRedirectTo },
+      });
+
+      if (resendError) {
+        setError(explainAuthError(resendError.message));
+        return;
+      }
+
+      setNotice(
+        "確認メールを再送しました。迷惑メールフォルダも確認し、リンクを開いて登録を完了してください。",
+      );
+    } finally {
+      setResending(false);
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -136,7 +194,7 @@ export default function LoginPage() {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`,
+          emailRedirectTo: buildEmailRedirectTo(nextPath),
         },
       });
 
@@ -146,8 +204,19 @@ export default function LoginPage() {
       }
 
       if (!session) {
+        const { error: resendError } = await supabase.auth.resend({
+          type: "signup",
+          email,
+          options: { emailRedirectTo: buildEmailRedirectTo(nextPath) },
+        });
+
+        if (resendError) {
+          setError(explainAuthError(resendError.message));
+          return;
+        }
+
         setNotice(
-          "確認メールを送信しました。メール内リンクを開いてログインを完了してください。",
+          "確認メールを送信しました。迷惑メールフォルダも確認し、メール内リンクを開いてログインを完了してください。",
         );
         return;
       }
@@ -273,6 +342,17 @@ export default function LoginPage() {
                     ? "ログインする"
                     : "アカウントを作成する"}
               </button>
+
+              {mode === "signup" ? (
+                <button
+                  type="button"
+                  disabled={resending || pending}
+                  onClick={handleResendConfirmation}
+                  className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-2.5 text-sm font-semibold text-zinc-100 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {resending ? "再送中..." : "確認メールを再送"}
+                </button>
+              ) : null}
             </form>
 
             <p className="mt-6 text-xs text-zinc-400">
