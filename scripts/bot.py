@@ -2,6 +2,7 @@ import asyncio
 import hashlib
 import json
 import logging
+import mimetypes
 import os
 import re
 import sys
@@ -9,7 +10,7 @@ from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
-from urllib.parse import parse_qs, quote, urlparse
+from urllib.parse import parse_qs, urlparse
 
 import aria2p
 import bencodepy
@@ -41,6 +42,12 @@ class ParsedTorrentMeta:
     name: Optional[str]
 
 
+@dataclass
+class GeneratedMetadata:
+    title: str
+    description: str
+
+
 def load_env() -> None:
     load_dotenv(".env.local", override=False)
 
@@ -50,6 +57,13 @@ def required_env(name: str) -> str:
     if not value:
         raise RuntimeError(f"Missing required environment variable: {name}")
     return value
+
+
+def optional_bool_env(name: str, default: bool) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def create_supabase_admin_client() -> Client:
@@ -259,13 +273,145 @@ async def wait_until_complete(
         await asyncio.sleep(poll_seconds)
 
 
-def build_video_source_url(local_path: str, base_url: str) -> str:
-    file_name = Path(local_path).name
-    if not file_name:
-        raise RuntimeError(f"Cannot derive filename from path: {local_path}")
+def sanitize_storage_filename(file_name: str) -> str:
+    return re.sub(r"[^A-Za-z0-9._-]", "_", file_name)
 
-    clean_base = base_url.rstrip("/")
-    return f"{clean_base}/{quote(file_name)}"
+
+def resolve_public_url(value: Any) -> str:
+    if isinstance(value, str):
+        return value
+
+    if isinstance(value, dict):
+        candidates = [
+            value.get("publicURL"),
+            value.get("publicUrl"),
+            value.get("public_url"),
+            value.get("signedURL"),
+        ]
+        for candidate in candidates:
+            if isinstance(candidate, str) and candidate:
+                return candidate
+
+    raise RuntimeError("Could not resolve public URL from storage response")
+
+
+def upload_to_storage_and_get_public_url(
+    supabase: Client,
+    *,
+    local_file_path: str,
+    info_hash: Optional[str],
+) -> tuple[str, str]:
+    local_path = Path(local_file_path)
+    if not local_path.exists():
+        raise RuntimeError(f"Local file not found for upload: {local_file_path}")
+
+    bucket = os.getenv("SUPABASE_STORAGE_BUCKET", "videos")
+    safe_name = sanitize_storage_filename(local_path.name)
+    key_prefix = info_hash or hashlib.sha1(local_path.name.encode("utf-8")).hexdigest()[:12]
+    object_path = f"{key_prefix}/{safe_name}"
+
+    content_type = mimetypes.guess_type(local_path.name)[0] or "application/octet-stream"
+    with local_path.open("rb") as file_obj:
+        supabase.storage.from_(bucket).upload(
+            path=object_path,
+            file=file_obj,
+            file_options={"content-type": content_type, "upsert": "true"},
+        )
+
+    public_url = resolve_public_url(supabase.storage.from_(bucket).get_public_url(object_path))
+    return public_url, object_path
+
+
+def fallback_generated_metadata(filename: str) -> GeneratedMetadata:
+    stem = Path(filename).stem
+    normalized = re.sub(r"[_\-.]+", " ", stem).strip()
+    title = normalized.title() if normalized else "Untitled Torrent Video"
+    description = (
+        f"{title} was automatically ingested from the BitTorrent pipeline and prepared for streaming delivery."
+    )
+    return GeneratedMetadata(title=title, description=description)
+
+
+def parse_metadata_json(text: str) -> Optional[GeneratedMetadata]:
+    text = text.strip()
+    if not text:
+        return None
+
+    candidates = [text]
+    match = re.search(r"\{[\s\S]*\}", text)
+    if match:
+        candidates.insert(0, match.group(0))
+
+    for candidate in candidates:
+        try:
+            obj = json.loads(candidate)
+        except json.JSONDecodeError:
+            continue
+
+        if not isinstance(obj, dict):
+            continue
+
+        title = str(obj.get("title", "")).strip()
+        description = str(obj.get("description", "")).strip()
+        if title and description:
+            return GeneratedMetadata(title=title, description=description)
+
+    return None
+
+
+def generate_video_metadata(filename: str) -> GeneratedMetadata:
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        logger.info("OPENAI_API_KEY is not set. Using fallback metadata for %s", filename)
+        return fallback_generated_metadata(filename)
+
+    try:
+        from openai import OpenAI
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("openai package not available (%s). Using fallback metadata.", exc)
+        return fallback_generated_metadata(filename)
+
+    model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+    prompt = (
+        "以下のファイル名から、動画配信プラットフォームにふさわしい魅力的な"
+        "『タイトル（title）』と『あらすじ（description）』を推測または創作し、"
+        "必ずJSON形式で返してください。"
+        f"ファイル名: {filename}"
+    )
+
+    try:
+        client = OpenAI(api_key=api_key)
+        response = client.responses.create(
+            model=model,
+            input=[
+                {
+                    "role": "system",
+                    "content": "You are a metadata generator. Always return only valid JSON with keys title and description.",
+                },
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.7,
+            max_output_tokens=220,
+        )
+
+        generated_text = getattr(response, "output_text", "") or ""
+        parsed = parse_metadata_json(generated_text)
+        if parsed:
+            return parsed
+
+        logger.warning("Failed to parse LLM JSON output. Using fallback metadata.")
+        return fallback_generated_metadata(filename)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Metadata generation failed (%s). Using fallback metadata.", exc)
+        return fallback_generated_metadata(filename)
+
+
+def cleanup_local_file(local_file_path: str) -> None:
+    target = Path(local_file_path)
+    if not target.exists():
+        return
+    target.unlink()
+    logger.info("Removed local file after successful cloud upload: %s", target)
 
 
 def pick_primary_file(download: aria2p.Download) -> str:
@@ -287,14 +433,14 @@ def upsert_video(
     task: TaskItem,
     info_hash: Optional[str],
     source_url: str,
-    fallback_title: Optional[str],
+    generated_metadata: GeneratedMetadata,
 ) -> None:
-    title = (task.title or fallback_title or "Untitled Torrent Video").strip()
+    title = (task.title or generated_metadata.title or "Untitled Torrent Video").strip()
     if not title:
         title = "Untitled Torrent Video"
 
     description = (
-        (task.description or "Imported from research BitTorrent pipeline").strip()
+        (task.description or generated_metadata.description).strip()
         or "Imported from research BitTorrent pipeline"
     )
 
@@ -358,7 +504,7 @@ async def run() -> None:
 
     tasks_path = os.getenv("TORRENT_TASKS_JSON", "scripts/torrent_tasks.json")
     download_dir = os.getenv("TORRENT_DOWNLOAD_DIR", "downloads")
-    stream_base_url = required_env("STREAM_BASE_URL")
+    cleanup_enabled = optional_bool_env("TORRENT_DELETE_LOCAL_AFTER_UPLOAD", True)
 
     poll_seconds = float(os.getenv("TORRENT_POLL_SECONDS", "5"))
     max_downloads_per_window = int(os.getenv("TORRENT_MAX_DOWNLOADS", "6"))
@@ -412,18 +558,32 @@ async def run() -> None:
             )
 
             local_file_path = pick_primary_file(completed)
-            source_url = build_video_source_url(local_file_path, stream_base_url)
+            source_url, object_path = upload_to_storage_and_get_public_url(
+                supabase,
+                local_file_path=local_file_path,
+                info_hash=meta.info_hash,
+            )
+            logger.info("Uploaded to storage path=%s", object_path)
+
+            generated_metadata = generate_video_metadata(Path(local_file_path).name)
 
             upsert_video(
                 supabase=supabase,
                 task=task,
                 info_hash=meta.info_hash,
                 source_url=source_url,
-                fallback_title=meta.name,
+                generated_metadata=generated_metadata,
             )
 
             imported += 1
-            logger.info("Imported gid=%s title=%s", completed.gid, task.title or meta.name)
+            logger.info(
+                "Imported gid=%s title=%s",
+                completed.gid,
+                task.title or generated_metadata.title,
+            )
+
+            if cleanup_enabled:
+                cleanup_local_file(local_file_path)
         except Exception as exc:  # noqa: BLE001
             failed += 1
             logger.exception("Task failed: %s", exc)

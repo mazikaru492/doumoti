@@ -2,3 +2,4 @@ aria2p==0.12.1
 supabase==2.18.1
 python-dotenv==1.1.1
 bencode.py==4.0.0
+openai==1.75.0
