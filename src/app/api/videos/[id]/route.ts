@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createSupabaseServerClient } from "@/utils/supabase/server";
 import { createSupabaseAdminClient } from "@/utils/supabase/admin";
-import { signClaims } from "@/lib/security";
+import { signVideoUrl } from "@/utils/video-signer";
 
 export const runtime = "nodejs";
 
@@ -40,29 +40,22 @@ function canAccessFull(userTier: Tier, requiredTier: Tier): boolean {
   return TIER_RANK[userTier] >= TIER_RANK[requiredTier];
 }
 
-function issuePreviewToken(params: {
-  userId: string;
-  videoId: string;
-  tier: Tier;
-}): string {
-  return signClaims(
-    {
-      sub: params.userId,
-      videoId: params.videoId,
-      tier: params.tier,
-      maxPreviewSeconds: PREVIEW_SECONDS,
-      mode: "preview-only",
-    },
-    {
-      ttlSeconds: PREVIEW_SECONDS,
-      secret: "playback",
-      purpose: "supabase-video-preview",
-    },
-  );
+function isSafeVideoId(videoId: string): boolean {
+  return /^[a-f0-9-]{36}$/i.test(videoId);
 }
 
 export async function GET(request: NextRequest, { params }: Params) {
   const { id } = await params;
+
+  if (!isSafeVideoId(id)) {
+    return NextResponse.json(
+      {
+        error: "INVALID_VIDEO_ID",
+        message: "不正な動画IDです。",
+      },
+      { status: 400 },
+    );
+  }
 
   const supabase = await createSupabaseServerClient();
   const {
@@ -163,10 +156,10 @@ export async function GET(request: NextRequest, { params }: Params) {
   }
 
   if (userTier === "NORMAL") {
-    const previewToken = issuePreviewToken({
+    const signedPreview = signVideoUrl({
       userId: user.id,
       videoId: video.id,
-      tier: userTier,
+      ttlSeconds: 60 * 5,
     });
 
     return NextResponse.json(
@@ -181,14 +174,14 @@ export async function GET(request: NextRequest, { params }: Params) {
           maxPreviewSeconds: PREVIEW_SECONDS,
           preview: {
             issued: true,
-            // Placeholder endpoint for a future signed preview stream implementation.
-            previewUrl: `/api/videos/${video.id}/preview?token=${encodeURIComponent(previewToken)}`,
-            tokenExpiresInSeconds: PREVIEW_SECONDS,
+            previewUrl: `/api/videos/${video.id}/preview?expires=${signedPreview.expires}&signature=${signedPreview.signature}`,
+            tokenExpiresInSeconds:
+              signedPreview.expires - Math.floor(Date.now() / 1000),
           },
         },
       },
       {
-        status: 403,
+        status: 200,
         headers: {
           "Cache-Control": "private, no-store",
         },

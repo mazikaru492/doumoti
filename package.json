@@ -6,14 +6,19 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "import-data": "tsx scripts/import-videos.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.9.0",
     "@supabase/supabase-js": "^2.99.1",
+    "axios": "^1.13.6",
+    "cheerio": "^1.2.0",
+    "dotenv": "^17.3.1",
     "hls.js": "^1.6.15",
     "lucide-react": "^0.577.0",
     "next": "16.1.6",
+    "puppeteer": "^24.39.1",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
@@ -26,6 +31,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }
