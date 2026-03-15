@@ -25,19 +25,19 @@ interface VideoPageProps {
  */
 export default async function VideoPage({ params }: VideoPageProps) {
   const { id } = await params;
-  const video = getVideoById(id);
+  const video = await getVideoById(id);
 
   if (!video) {
     notFound();
   }
 
   // 同ジャンルの関連動画（自分自身を除外）
-  const relatedVideos = getVideosByGenre(video.genre).filter(
+  const relatedVideos = (await getVideosByGenre(video.genre)).filter(
     (v) => v.id !== video.id,
   );
 
   // 関連動画が少ない場合、他のジャンルの人気動画で補完
-  const allVideos = getVideos();
+  const allVideos = await getVideos();
   const additionalVideos =
     relatedVideos.length < 4
       ? allVideos

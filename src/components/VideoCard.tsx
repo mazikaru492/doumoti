@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Play, Star, Clock } from "lucide-react";
-import { type Video, formatDuration, formatViews } from "@/lib/data";
+import { Play, Clock } from "lucide-react";
+import { type Video, formatDuration, formatTierLabel } from "@/lib/video-model";
 
 interface VideoCardProps {
   video: Video;
@@ -22,7 +22,7 @@ export default function VideoCard({ video }: VideoCardProps) {
       {/* サムネイル */}
       <div className="relative aspect-video overflow-hidden">
         <Image
-          src={video.thumbnailUrl}
+          src={video.thumbnail_url}
           alt={video.title}
           fill
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
@@ -39,12 +39,12 @@ export default function VideoCard({ video }: VideoCardProps) {
         {/* 再生時間バッジ */}
         <div className="absolute bottom-2 right-2 flex items-center gap-1 bg-black/80 text-white text-xs font-mono px-2 py-0.5 rounded-md backdrop-blur-sm">
           <Clock className="w-3 h-3" />
-          {formatDuration(video.duration)}
+          {formatDuration(video.duration_seconds)}
         </div>
 
-        {/* ジャンルバッジ */}
+        {/* プランバッジ */}
         <div className="absolute top-2 left-2 bg-primary/80 text-white text-xs px-2 py-0.5 rounded-full backdrop-blur-sm font-medium">
-          {video.genre}
+          {formatTierLabel(video.minimum_required_tier)}
         </div>
       </div>
 
@@ -57,11 +57,8 @@ export default function VideoCard({ video }: VideoCardProps) {
           {video.description}
         </p>
         <div className="flex items-center justify-between mt-2 text-xs text-muted">
-          <div className="flex items-center gap-1">
-            <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
-            <span>{video.rating.toFixed(1)}</span>
-          </div>
-          <span>{formatViews(video.views)} 回再生</span>
+          <span>{formatTierLabel(video.minimum_required_tier)}</span>
+          <span>{formatDuration(video.duration_seconds)}</span>
         </div>
       </div>
     </Link>

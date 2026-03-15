@@ -81,7 +81,7 @@ export async function GET(request: NextRequest, { params }: Params) {
     );
   }
 
-  const upstreamSource = resolvePlayableSource(id, claims.quality);
+  const upstreamSource = await resolvePlayableSource(id, claims.quality);
 
   if (claims.plan === "normal") {
     if (!isM3u8Url(upstreamSource)) {

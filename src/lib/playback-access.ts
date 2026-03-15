@@ -32,8 +32,10 @@ type AdSession = {
 const adSessionStore = new Map<string, AdSession>();
 const previewWindowStore = new Map<string, { endsAtSec: number }>();
 
-function streamCatalog(videoId: string): { sd: string; hd: string } {
-  const video = getVideoById(videoId);
+async function streamCatalog(
+  videoId: string,
+): Promise<{ sd: string; hd: string }> {
+  const video = await getVideoById(videoId);
   if (!video) {
     throw new Error("video-not-found");
   }
@@ -88,11 +90,11 @@ export function verifyPlaybackToken(token: string): PlaybackClaims | null {
   });
 }
 
-export function resolvePlayableSource(
+export async function resolvePlayableSource(
   videoId: string,
   quality: PlaybackQuality,
-): string {
-  const variants = streamCatalog(videoId);
+): Promise<string> {
+  const variants = await streamCatalog(videoId);
   return quality === "hd" ? variants.hd : variants.sd;
 }
 

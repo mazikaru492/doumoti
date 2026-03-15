@@ -223,21 +223,35 @@ async def wait_until_complete(
     gid: str,
     poll_seconds: float,
 ) -> aria2p.Download:
+    active_gid = gid
     while True:
-        download = api.get_download(gid)
+        download = api.get_download(active_gid)
+
+        followed_ids = list(getattr(download, "followed_by_ids", []) or [])
+        if followed_ids:
+            next_gid = str(followed_ids[0])
+            if next_gid != active_gid:
+                logger.info(
+                    "Switching to followed download gid=%s (from gid=%s)",
+                    next_gid,
+                    active_gid,
+                )
+                active_gid = next_gid
+                await asyncio.sleep(poll_seconds)
+                continue
 
         if download.is_complete:
             return download
 
         if download.has_failed:
             raise RuntimeError(
-                f"Download failed gid={gid} error_code={download.error_code} msg={download.error_message}"
+                f"Download failed gid={active_gid} error_code={download.error_code} msg={download.error_message}"
             )
 
         progress = float(download.progress or 0.0)
         logger.info(
             "Downloading gid=%s progress=%.2f%% speed=%s",
-            gid,
+            active_gid,
             progress,
             download.download_speed_string(),
         )

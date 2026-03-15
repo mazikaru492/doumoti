@@ -3,7 +3,7 @@
 import { useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import VideoCard from "@/components/VideoCard";
-import { type Video } from "@/lib/data";
+import { type Video } from "@/lib/video-model";
 
 interface GenreSectionProps {
   /** ジャンル名（セクションタイトル） */

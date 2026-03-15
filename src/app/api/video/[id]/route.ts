@@ -11,7 +11,7 @@ interface Params {
 
 export async function GET(request: NextRequest, { params }: Params) {
   const { id } = await params;
-  const video = getVideoById(id);
+  const video = await getVideoById(id);
 
   if (!video) {
     return NextResponse.json({ error: "Video not found" }, { status: 404 });

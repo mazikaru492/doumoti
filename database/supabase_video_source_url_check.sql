@@ -10,3 +10,6 @@ CHECK (
   char_length(btrim(video_source_url)) > 0
   AND video_source_url ~* '^https?://'
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS videos_video_source_url_unique_idx
+ON public.videos (video_source_url);

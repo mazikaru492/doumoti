@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Play, Star, Info } from "lucide-react";
-import { type Video, formatViews } from "@/lib/data";
+import { Play, Info, Clock } from "lucide-react";
+import { type Video, formatDuration, formatTierLabel } from "@/lib/video-model";
 
 interface HeroSectionProps {
   /** ヒーローに表示する注目動画 */
@@ -19,7 +19,7 @@ export default function HeroSection({ video }: HeroSectionProps) {
     <section className="relative w-full h-[70vh] min-h-[500px] max-h-[800px] overflow-hidden">
       {/* 背景画像 */}
       <Image
-        src={video.thumbnailUrl}
+        src={video.thumbnail_url}
         alt={video.title}
         fill
         priority
@@ -38,16 +38,11 @@ export default function HeroSection({ video }: HeroSectionProps) {
             {/* ジャンルバッジ */}
             <div className="flex items-center gap-2 mb-4">
               <span className="bg-primary/20 text-primary-light text-xs font-semibold px-3 py-1 rounded-full border border-primary/30">
-                {video.genre}
+                {formatTierLabel(video.minimum_required_tier)}
               </span>
-              <div className="flex items-center gap-1 text-yellow-400">
-                <Star className="w-4 h-4 fill-yellow-400" />
-                <span className="text-sm font-medium">
-                  {video.rating.toFixed(1)}
-                </span>
-              </div>
-              <span className="text-muted text-sm">
-                {formatViews(video.views)} 回再生
+              <span className="inline-flex items-center gap-1 text-muted text-sm">
+                <Clock className="w-4 h-4" />
+                {formatDuration(video.duration_seconds)}
               </span>
             </div>
 
