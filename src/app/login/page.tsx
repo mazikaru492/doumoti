@@ -41,6 +41,33 @@ function explainAuthError(message: string): string {
   return "認証処理に失敗しました。時間をおいて再試行してください。";
 }
 
+function explainQueryError(code: string | null, reason: string | null): string | null {
+  if (!code) {
+    return null;
+  }
+
+  if (code === "auth_code_missing") {
+    return "確認リンクが不完全です。メール本文のURLを最初から開き直してください。";
+  }
+
+  if (code === "auth_otp_type_invalid") {
+    return "確認リンクの種類を判別できませんでした。新しい確認メールを再送してください。";
+  }
+
+  if (code === "auth_callback_failed") {
+    if (reason) {
+      return `確認リンクの処理に失敗しました: ${reason}`;
+    }
+    return "確認リンクの処理に失敗しました。リンクの有効期限切れの可能性があります。";
+  }
+
+  if (code === "supabase_env_missing") {
+    return "サーバー側の認証設定が不足しています。管理者に連絡してください。";
+  }
+
+  return "認証フローでエラーが発生しました。";
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -48,6 +75,10 @@ export default function LoginPage() {
   const nextPath = useMemo(() => {
     const next = searchParams.get("next");
     return next && next.startsWith("/") ? next : "/mypage";
+  }, [searchParams]);
+
+  const callbackError = useMemo(() => {
+    return explainQueryError(searchParams.get("error"), searchParams.get("reason"));
   }, [searchParams]);
 
   const [mode, setMode] = useState<AuthMode>(() => {
@@ -134,6 +165,12 @@ export default function LoginPage() {
         <h1 className="mb-6 text-3xl font-semibold leading-tight text-white">
           {mode === "signin" ? "ログイン" : "新規登録"}
         </h1>
+
+        {callbackError ? (
+          <p className="mb-4 rounded-lg border border-amber-500/50 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
+            {callbackError}
+          </p>
+        ) : null}
 
         <div className="mb-6 grid grid-cols-2 rounded-xl border border-white/10 bg-white/5 p-1 text-sm">
           <button

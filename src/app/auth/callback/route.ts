@@ -1,4 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
+import type { EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 
 function sanitizeNextPath(value: string | null): string {
@@ -11,11 +12,13 @@ function sanitizeNextPath(value: string | null): string {
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
+  const tokenHash = requestUrl.searchParams.get("token_hash");
+  const otpType = requestUrl.searchParams.get("type");
   const nextPath = sanitizeNextPath(requestUrl.searchParams.get("next"));
 
   const redirectUrl = new URL(nextPath, requestUrl.origin);
 
-  if (!code) {
+  if (!code && !tokenHash) {
     const errorUrl = new URL("/login", requestUrl.origin);
     errorUrl.searchParams.set("error", "auth_code_missing");
     return NextResponse.redirect(errorUrl);
@@ -45,10 +48,37 @@ export async function GET(request: NextRequest) {
     },
   });
 
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
+  let error: { message: string } | null = null;
+
+  if (code) {
+    const exchangeResult = await supabase.auth.exchangeCodeForSession(code);
+    error = exchangeResult.error;
+  } else if (tokenHash) {
+    const supportedOtpTypes: EmailOtpType[] = [
+      "signup",
+      "magiclink",
+      "recovery",
+      "email",
+      "email_change",
+    ];
+
+    if (!otpType || !supportedOtpTypes.includes(otpType as EmailOtpType)) {
+      const errorUrl = new URL("/login", requestUrl.origin);
+      errorUrl.searchParams.set("error", "auth_otp_type_invalid");
+      return NextResponse.redirect(errorUrl);
+    }
+
+    const verifyResult = await supabase.auth.verifyOtp({
+      token_hash: tokenHash,
+      type: otpType as EmailOtpType,
+    });
+    error = verifyResult.error;
+  }
+
   if (error) {
     const errorUrl = new URL("/login", requestUrl.origin);
     errorUrl.searchParams.set("error", "auth_callback_failed");
+    errorUrl.searchParams.set("reason", error.message);
     return NextResponse.redirect(errorUrl);
   }
 
