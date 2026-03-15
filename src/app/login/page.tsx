@@ -41,7 +41,10 @@ function explainAuthError(message: string): string {
   return "認証処理に失敗しました。時間をおいて再試行してください。";
 }
 
-function explainQueryError(code: string | null, reason: string | null): string | null {
+function explainQueryError(
+  code: string | null,
+  reason: string | null,
+): string | null {
   if (!code) {
     return null;
   }
@@ -71,6 +74,7 @@ function explainQueryError(code: string | null, reason: string | null): string |
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const posterSeeds = [121, 344, 888, 220, 777, 503, 901, 612, 452];
 
   const nextPath = useMemo(() => {
     const next = searchParams.get("next");
@@ -78,7 +82,10 @@ export default function LoginPage() {
   }, [searchParams]);
 
   const callbackError = useMemo(() => {
-    return explainQueryError(searchParams.get("error"), searchParams.get("reason"));
+    return explainQueryError(
+      searchParams.get("error"),
+      searchParams.get("reason"),
+    );
   }, [searchParams]);
 
   const [mode, setMode] = useState<AuthMode>(() => {
@@ -89,6 +96,7 @@ export default function LoginPage() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const tabIndex = mode === "signin" ? 0 : 1;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -152,127 +160,161 @@ export default function LoginPage() {
   }
 
   return (
-    <section className="relative min-h-[calc(100vh-8rem)] overflow-hidden px-6 py-14 text-foreground">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_18%,rgba(229,9,20,0.26),transparent_48%),radial-gradient(circle_at_85%_10%,rgba(255,98,0,0.14),transparent_42%),linear-gradient(180deg,#040406_0%,#0d0d14_52%,#08080b_100%)]"
-      />
+    <section className="relative min-h-[calc(100vh-4rem)] overflow-hidden bg-[#08090c] text-foreground">
+      <div className="mx-auto grid min-h-[calc(100vh-4rem)] w-full max-w-[1440px] lg:grid-cols-2">
+        <div className="relative flex items-center justify-center px-6 py-14 sm:px-10 lg:px-14">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_22%_20%,rgba(255,84,59,0.2),transparent_42%),radial-gradient(circle_at_80%_80%,rgba(145,52,255,0.14),transparent_40%),linear-gradient(180deg,#090b10_0%,#0d1018_55%,#0a0b11_100%)]"
+          />
 
-      <div className="relative mx-auto w-full max-w-md rounded-2xl border border-white/10 bg-black/55 p-8 shadow-[0_0_0_1px_rgba(255,255,255,0.03),0_30px_80px_rgba(0,0,0,0.45)] backdrop-blur-md">
-        <p className="mb-3 text-xs uppercase tracking-[0.28em] text-red-300/85">
-          Doumoti Access
-        </p>
-        <h1 className="mb-6 text-3xl font-semibold leading-tight text-white">
-          {mode === "signin" ? "ログイン" : "新規登録"}
-        </h1>
+          <div className="relative w-full max-w-md rounded-2xl border border-white/10 bg-black/55 p-8 shadow-[0_0_0_1px_rgba(255,255,255,0.03),0_30px_80px_rgba(0,0,0,0.45)] backdrop-blur-md">
+            <p className="mb-3 text-xs uppercase tracking-[0.28em] text-red-300/85">
+              Doumoti Access
+            </p>
+            <h1 className="mb-1 text-3xl font-semibold leading-tight text-white">
+              {mode === "signin" ? "ログイン" : "新規登録"}
+            </h1>
+            <p className="mb-6 text-sm text-zinc-400">
+              {mode === "signin"
+                ? "アカウントにログインして視聴を再開"
+                : "新しいアカウントを作成して今すぐ視聴開始"}
+            </p>
 
-        {callbackError ? (
-          <p className="mb-4 rounded-lg border border-amber-500/50 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
-            {callbackError}
-          </p>
-        ) : null}
+            {callbackError ? (
+              <p className="mb-4 rounded-lg border border-red-500/60 bg-red-500/10 px-3 py-2 text-sm text-red-100">
+                {callbackError}
+              </p>
+            ) : null}
 
-        <div className="mb-6 grid grid-cols-2 rounded-xl border border-white/10 bg-white/5 p-1 text-sm">
-          <button
-            type="button"
-            onClick={() => {
-              setMode("signin");
-              setError(null);
-              setNotice(null);
-            }}
-            className={`rounded-lg px-3 py-2 transition ${
-              mode === "signin"
-                ? "bg-red-600 text-white"
-                : "text-zinc-300 hover:bg-white/10"
-            }`}
-          >
-            ログイン
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setMode("signup");
-              setError(null);
-              setNotice(null);
-            }}
-            className={`rounded-lg px-3 py-2 transition ${
-              mode === "signup"
-                ? "bg-red-600 text-white"
-                : "text-zinc-300 hover:bg-white/10"
-            }`}
-          >
-            新規登録
-          </button>
+            <div className="relative mb-6 grid grid-cols-2 rounded-xl border border-white/10 bg-white/5 p-1 text-sm">
+              <span
+                aria-hidden
+                className="absolute inset-y-1 w-[calc(50%-0.25rem)] rounded-lg bg-red-600 shadow-[0_8px_24px_rgba(229,9,20,0.35)] transition-transform duration-300"
+                style={{ transform: `translateX(${tabIndex * 100}%)` }}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  setMode("signin");
+                  setError(null);
+                  setNotice(null);
+                }}
+                className={`relative z-10 rounded-lg px-3 py-2 transition-colors ${
+                  mode === "signin" ? "text-white" : "text-zinc-300"
+                }`}
+              >
+                ログイン
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setMode("signup");
+                  setError(null);
+                  setNotice(null);
+                }}
+                className={`relative z-10 rounded-lg px-3 py-2 transition-colors ${
+                  mode === "signup" ? "text-white" : "text-zinc-300"
+                }`}
+              >
+                新規登録
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <label className="block text-sm text-zinc-200">
+                メールアドレス
+                <input
+                  required
+                  type="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value.trim())}
+                  className="mt-2 w-full rounded-lg border border-white/15 bg-black/45 px-3 py-2.5 text-sm text-white outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-500/40"
+                  placeholder="you@example.com"
+                />
+              </label>
+
+              <label className="block text-sm text-zinc-200">
+                パスワード
+                <input
+                  required
+                  type="password"
+                  autoComplete={
+                    mode === "signin" ? "current-password" : "new-password"
+                  }
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  className="mt-2 w-full rounded-lg border border-white/15 bg-black/45 px-3 py-2.5 text-sm text-white outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-500/40"
+                  placeholder="8文字以上"
+                />
+              </label>
+
+              {error ? (
+                <p className="rounded-lg border border-red-500/60 bg-red-500/10 px-3 py-2 text-sm text-red-100">
+                  {error}
+                </p>
+              ) : null}
+
+              {notice ? (
+                <p className="rounded-lg border border-emerald-500/50 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">
+                  {notice}
+                </p>
+              ) : null}
+
+              <button
+                disabled={pending}
+                type="submit"
+                className="mt-2 w-full rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {pending
+                  ? "処理中..."
+                  : mode === "signin"
+                    ? "ログインする"
+                    : "アカウントを作成する"}
+              </button>
+            </form>
+
+            <p className="mt-6 text-xs text-zinc-400">
+              認証に成功すると {nextPath} に移動します。
+              <br />
+              Supabase RLSにより、ユーザー権限に応じたデータのみ取得されます。
+            </p>
+
+            <div className="mt-5 text-right">
+              <Link
+                href="/"
+                className="text-xs text-zinc-300 underline-offset-4 hover:underline"
+              >
+                トップページへ戻る
+              </Link>
+            </div>
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <label className="block text-sm text-zinc-200">
-            メールアドレス
-            <input
-              required
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value.trim())}
-              className="mt-2 w-full rounded-lg border border-white/15 bg-black/45 px-3 py-2.5 text-sm text-white outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-500/40"
-              placeholder="you@example.com"
-            />
-          </label>
+        <aside className="relative hidden overflow-hidden lg:block">
+          <div className="absolute inset-0 grid grid-cols-3 gap-2 p-2">
+            {posterSeeds.map((seed) => (
+              <div
+                key={seed}
+                className="rounded-xl bg-cover bg-center"
+                style={{
+                  backgroundImage: `url(https://picsum.photos/seed/login-${seed}/420/720)`,
+                }}
+              />
+            ))}
+          </div>
+          <div className="absolute inset-0 bg-[linear-gradient(110deg,rgba(5,6,10,0.75),rgba(5,6,10,0.15)),linear-gradient(180deg,rgba(3,4,8,0.15),rgba(3,4,8,0.75))]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_15%,rgba(255,68,43,0.35),transparent_45%),radial-gradient(circle_at_20%_90%,rgba(74,116,255,0.25),transparent_40%)]" />
 
-          <label className="block text-sm text-zinc-200">
-            パスワード
-            <input
-              required
-              type="password"
-              autoComplete={
-                mode === "signin" ? "current-password" : "new-password"
-              }
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              className="mt-2 w-full rounded-lg border border-white/15 bg-black/45 px-3 py-2.5 text-sm text-white outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-500/40"
-              placeholder="8文字以上"
-            />
-          </label>
-
-          {error ? (
-            <p className="rounded-lg border border-red-500/50 bg-red-500/10 px-3 py-2 text-sm text-red-200">
-              {error}
+          <div className="absolute bottom-8 left-8 right-8 rounded-2xl border border-white/20 bg-black/45 p-6 backdrop-blur-sm">
+            <p className="text-xs uppercase tracking-[0.28em] text-red-300/80">Stream Securely</p>
+            <h2 className="mt-2 text-2xl font-semibold text-white">映画館級の体験を、どこでも。</h2>
+            <p className="mt-2 text-sm leading-relaxed text-zinc-200/80">
+              最新の収集パイプラインで更新されたタイトルを、プランに応じた安全な再生フローで配信します。
             </p>
-          ) : null}
-
-          {notice ? (
-            <p className="rounded-lg border border-emerald-500/50 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">
-              {notice}
-            </p>
-          ) : null}
-
-          <button
-            disabled={pending}
-            type="submit"
-            className="mt-2 w-full rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {pending
-              ? "処理中..."
-              : mode === "signin"
-                ? "ログインする"
-                : "アカウントを作成する"}
-          </button>
-        </form>
-
-        <p className="mt-6 text-xs text-zinc-400">
-          認証に成功すると {nextPath} に移動します。
-          <br />
-          Supabase RLSにより、ユーザー権限に応じたデータのみ取得されます。
-        </p>
-
-        <div className="mt-5 text-right">
-          <Link
-            href="/"
-            className="text-xs text-zinc-300 underline-offset-4 hover:underline"
-          >
-            トップページへ戻る
-          </Link>
-        </div>
+          </div>
+        </aside>
       </div>
     </section>
   );
