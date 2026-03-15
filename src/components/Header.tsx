@@ -2,19 +2,26 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Search, Menu, X, UserRound } from "lucide-react";
-import { type SubscriptionPlan } from "@/lib/subscription";
+import { useRouter } from "next/navigation";
+import { Search, Menu, X, UserRound, LogOut } from "lucide-react";
+import { getSupabaseBrowserClient } from "@/utils/supabase/client";
 
 /**
  * Header — Netflixライクなグローバルナビゲーション
  */
 interface HeaderProps {
-  currentPlan: SubscriptionPlan;
+  authState: {
+    isLoggedIn: boolean;
+    email: string | null;
+    subscriptionTier: "NORMAL" | "GENERAL" | "VIP" | null;
+  };
 }
 
-export default function Header({ currentPlan }: HeaderProps) {
+export default function Header({ authState }: HeaderProps) {
+  const router = useRouter();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -39,26 +46,37 @@ export default function Header({ currentPlan }: HeaderProps) {
     { href: "/#romance", label: "ロマンス" },
   ];
 
-  const plans = ["normal", "general", "vip"] as const;
-  const planLabels: Record<SubscriptionPlan, string> = {
-    normal: "Normal (無料)",
-    general: "General (1600円/月)",
-    vip: "VIP (2600円/月)",
+  const tierLabels: Record<"NORMAL" | "GENERAL" | "VIP", string> = {
+    NORMAL: "Normal",
+    GENERAL: "General",
+    VIP: "VIP",
   };
 
-  const planButtonStyles: Record<SubscriptionPlan, string> = {
-    normal:
-      "border border-white/45 bg-transparent text-white hover:border-white hover:bg-white/[0.08]",
-    general:
-      "border border-white/28 bg-white/[0.04] text-[#e9e9e9] hover:border-white/55 hover:bg-white/[0.12]",
-    vip: "border border-[#8f1e56] bg-[#8f1e56] text-white hover:bg-[#a72666] hover:border-[#a72666] shadow-[0_6px_18px_rgba(143,30,86,0.45)]",
+  const tierBadgeStyle: Record<"NORMAL" | "GENERAL" | "VIP", string> = {
+    NORMAL: "border-white/25 bg-[#2a2a2a] text-[#ececec]",
+    GENERAL: "border-white/30 bg-[#3a3a3a] text-white",
+    VIP: "border-[#b04a7a] bg-[#8f1e56] text-white",
   };
 
-  const currentPlanBadgeStyles: Record<SubscriptionPlan, string> = {
-    normal: "border-white/25 bg-[#2a2a2a] text-[#ececec]",
-    general: "border-white/30 bg-[#3a3a3a] text-white",
-    vip: "border-[#b04a7a] bg-[#8f1e56] text-white",
-  };
+  const tier = authState.subscriptionTier;
+  const userInitial = authState.email?.[0]?.toUpperCase() ?? "U";
+
+  async function handleLogout() {
+    if (isSigningOut) {
+      return;
+    }
+    setIsSigningOut(true);
+
+    try {
+      const supabase = getSupabaseBrowserClient();
+      await supabase.auth.signOut();
+      router.replace("/");
+      router.refresh();
+    } finally {
+      setIsSigningOut(false);
+      setIsMobileMenuOpen(false);
+    }
+  }
 
   return (
     <header
@@ -127,35 +145,52 @@ export default function Header({ currentPlan }: HeaderProps) {
                 />
               </div>
 
-              <div className="hidden shrink-0 items-center gap-2 rounded-full border border-white/15 bg-[#0f0f0f] px-3 py-1.5 lg:flex">
-                <span className="whitespace-nowrap text-[11px] font-semibold tracking-wide text-white/65">
-                  現在のプラン
-                </span>
-                <span className="whitespace-nowrap text-xs font-bold text-white">
-                  {planLabels[currentPlan]}
-                </span>
-              </div>
+              {authState.isLoggedIn ? (
+                <>
+                  {tier ? (
+                    <div className="hidden shrink-0 items-center gap-2 rounded-full border border-white/15 bg-[#0f0f0f] px-3 py-1.5 lg:flex">
+                      <span className="whitespace-nowrap text-[11px] font-semibold tracking-wide text-white/65">
+                        PLAN
+                      </span>
+                      <span
+                        className={`rounded-full border px-2.5 py-1 text-xs font-bold ${tierBadgeStyle[tier]}`}
+                      >
+                        {tierLabels[tier]}
+                      </span>
+                    </div>
+                  ) : null}
 
-              <div className="hidden items-center gap-1 xl:flex">
-                {plans.map((plan) => (
-                  <div
-                    key={plan}
-                    className={`flex h-9 shrink-0 items-center whitespace-nowrap rounded-full px-3 text-[11px] font-semibold tracking-[0.01em] transition-all duration-200 ${planButtonStyles[plan]} ${plan === currentPlan ? "ring-1 ring-white/40" : "opacity-80"}`}
-                    aria-label={`${planLabels[plan]}${plan === currentPlan ? " 利用中" : ""}`}
-                    aria-current={plan === currentPlan ? "true" : undefined}
-                  >
-                    <span>{planLabels[plan]}</span>
+                  <div className="hidden items-center gap-2 md:flex">
+                    <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-md border border-white/22 bg-gradient-to-br from-[#2a2a2a] to-[#171717] text-sm font-bold text-white shadow-[0_4px_12px_rgba(0,0,0,0.45)]">
+                      {userInitial}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      disabled={isSigningOut}
+                      className="inline-flex h-9 items-center gap-2 rounded-full border border-white/20 bg-[#161616] px-3 text-xs font-semibold text-white transition hover:border-white/45 disabled:opacity-60"
+                    >
+                      <LogOut className="h-3.5 w-3.5" />
+                      {isSigningOut ? "ログアウト中" : "ログアウト"}
+                    </button>
                   </div>
-                ))}
-              </div>
-
-              <button
-                type="button"
-                aria-label="プロフィール"
-                className="hidden h-9 w-9 items-center justify-center overflow-hidden rounded-md border border-white/22 bg-gradient-to-br from-[#2a2a2a] to-[#171717] text-white shadow-[0_4px_12px_rgba(0,0,0,0.45)] transition-all duration-200 hover:border-white/45 hover:brightness-110 md:flex"
-              >
-                <UserRound className="h-[18px] w-[18px]" />
-              </button>
+                </>
+              ) : (
+                <div className="hidden items-center gap-2 md:flex">
+                  <Link
+                    href="/login"
+                    className="inline-flex h-9 items-center rounded-full border border-white/25 bg-[#171717] px-4 text-xs font-semibold text-white transition hover:border-white/45"
+                  >
+                    ログイン
+                  </Link>
+                  <Link
+                    href="/login?mode=signup"
+                    className="inline-flex h-9 items-center rounded-full border border-[#8f1e56] bg-[#8f1e56] px-4 text-xs font-semibold text-white transition hover:bg-[#a72666] hover:border-[#a72666]"
+                  >
+                    新規登録
+                  </Link>
+                </div>
+              )}
 
               <button
                 type="button"
@@ -210,21 +245,27 @@ export default function Header({ currentPlan }: HeaderProps) {
           <div className="flex min-h-16 items-center justify-between border-b border-white/10 px-4">
             <div className="flex min-h-11 items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-gradient-to-br from-[#2a2a2a] to-[#171717] text-white">
-                <UserRound className="h-5 w-5" />
+                {authState.isLoggedIn ? (
+                  <span className="text-base font-bold">{userInitial}</span>
+                ) : (
+                  <UserRound className="h-5 w-5" />
+                )}
               </div>
               <div className="flex min-h-11 flex-col justify-center">
                 <p className="text-[11px] font-semibold tracking-[0.08em] text-white/55">
-                  CURRENT PLAN
+                  {authState.isLoggedIn ? "SIGNED IN" : "GUEST"}
                 </p>
-                <span
-                  className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-bold ${currentPlanBadgeStyles[currentPlan]}`}
-                >
-                  {currentPlan === "normal"
-                    ? "Normal"
-                    : currentPlan === "general"
-                      ? "General"
-                      : "VIP"}
-                </span>
+                {tier ? (
+                  <span
+                    className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-bold ${tierBadgeStyle[tier]}`}
+                  >
+                    {tierLabels[tier]}
+                  </span>
+                ) : (
+                  <span className="text-xs font-semibold text-white/70">
+                    ログインしてください
+                  </span>
+                )}
               </div>
             </div>
             <button
@@ -267,35 +308,34 @@ export default function Header({ currentPlan }: HeaderProps) {
               />
             </div>
 
-            <h3 className="mb-2 text-[12px] font-bold tracking-[0.09em] text-white/60">
-              SUBSCRIPTION / PLANS
-            </h3>
-
-            <div className="space-y-2">
-              {plans.map((plan) => (
-                <div
-                  key={plan}
-                  className={`flex min-h-11 items-center justify-between rounded-xl px-4 py-2 text-left text-sm font-semibold transition-all duration-200 ${
-                    plan === "vip"
-                      ? "border border-[#8f1e56] bg-[#8f1e56] text-white shadow-[0_8px_20px_rgba(143,30,86,0.35)]"
-                      : planButtonStyles[plan]
-                  } ${plan === currentPlan ? "ring-1 ring-white/45" : "opacity-90"}`}
-                  aria-label={`${planLabels[plan]}${plan === currentPlan ? " 利用中" : ""}`}
-                  aria-current={plan === currentPlan ? "true" : undefined}
+            {authState.isLoggedIn ? (
+              <button
+                type="button"
+                onClick={handleLogout}
+                disabled={isSigningOut}
+                className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/20 bg-[#181818] px-4 py-2 text-sm font-semibold text-white transition hover:border-white/45 disabled:opacity-60"
+              >
+                <LogOut className="h-4 w-4" />
+                {isSigningOut ? "ログアウト中" : "ログアウト"}
+              </button>
+            ) : (
+              <div className="space-y-2">
+                <Link
+                  href="/login"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="flex min-h-11 items-center justify-center rounded-xl border border-white/25 bg-[#181818] px-4 py-2 text-sm font-semibold text-white"
                 >
-                  <span>{planLabels[plan]}</span>
-                  {plan === currentPlan ? (
-                    <span className="rounded-full bg-white/16 px-2 py-0.5 text-[10px] font-bold text-white">
-                      利用中
-                    </span>
-                  ) : (
-                    <span className="text-xs font-bold text-white/70">
-                      選択
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
+                  ログイン
+                </Link>
+                <Link
+                  href="/login?mode=signup"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="flex min-h-11 items-center justify-center rounded-xl border border-[#8f1e56] bg-[#8f1e56] px-4 py-2 text-sm font-semibold text-white"
+                >
+                  新規登録
+                </Link>
+              </div>
+            )}
           </section>
         </div>
       </aside>

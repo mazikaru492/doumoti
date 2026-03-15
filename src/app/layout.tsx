@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { getAuthContextFromCookieStore } from "@/lib/session";
+import { createSupabaseServerClient } from "@/utils/supabase/server";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -32,14 +32,38 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const auth = await getAuthContextFromCookieStore();
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let subscriptionTier: "NORMAL" | "GENERAL" | "VIP" | null = null;
+
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("subscription_tier")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    const tier = profile?.subscription_tier;
+    if (tier === "NORMAL" || tier === "GENERAL" || tier === "VIP") {
+      subscriptionTier = tier;
+    }
+  }
 
   return (
     <html lang="ja">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground min-h-screen flex flex-col`}
       >
-        <Header currentPlan={auth.plan} />
+        <Header
+          authState={{
+            isLoggedIn: Boolean(user),
+            email: user?.email ?? null,
+            subscriptionTier,
+          }}
+        />
         <main className="flex-1">{children}</main>
         <Footer />
       </body>
