@@ -3,3 +3,4 @@ supabase==2.18.1
 python-dotenv==1.1.1
 bencode.py==4.0.0
 openai==1.75.0
+websockets==15.0.1

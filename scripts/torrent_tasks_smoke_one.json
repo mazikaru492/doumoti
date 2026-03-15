@@ -1,0 +1,10 @@
+[
+  {
+    "torrent_file": "scripts/torrents/tears-of-steel.torrent",
+    "title": "Tears of Steel Smoke Test",
+    "description": "Single-task smoke test for upload/upsert/delete flow",
+    "thumbnail_url": "https://picsum.photos/seed/tears-smoke/640/360",
+    "minimum_required_tier": "NORMAL",
+    "duration_seconds": 120
+  }
+]
