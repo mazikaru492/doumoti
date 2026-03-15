@@ -308,8 +308,12 @@ export default function LoginPage() {
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_15%,rgba(255,68,43,0.35),transparent_45%),radial-gradient(circle_at_20%_90%,rgba(74,116,255,0.25),transparent_40%)]" />
 
           <div className="absolute bottom-8 left-8 right-8 rounded-2xl border border-white/20 bg-black/45 p-6 backdrop-blur-sm">
-            <p className="text-xs uppercase tracking-[0.28em] text-red-300/80">Stream Securely</p>
-            <h2 className="mt-2 text-2xl font-semibold text-white">映画館級の体験を、どこでも。</h2>
+            <p className="text-xs uppercase tracking-[0.28em] text-red-300/80">
+              Stream Securely
+            </p>
+            <h2 className="mt-2 text-2xl font-semibold text-white">
+              映画館級の体験を、どこでも。
+            </h2>
             <p className="mt-2 text-sm leading-relaxed text-zinc-200/80">
               最新の収集パイプラインで更新されたタイトルを、プランに応じた安全な再生フローで配信します。
             </p>
