@@ -1,13 +1,12 @@
-import type { VideoRow } from "@/types/database";
+import type { VideoCatalogRow } from "@/types/database";
 
-export type SubscriptionTier = VideoRow["minimum_required_tier"];
+export type SubscriptionTier = VideoCatalogRow["minimum_required_tier"];
 
 export type Video = {
   id: string;
   title: string;
   description: string;
-  video_source_url: string;
-  thumbnail_url: string | null;
+  thumbnail_url: string;
   duration_seconds: number;
   minimum_required_tier: SubscriptionTier;
   created_at: string;

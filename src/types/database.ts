@@ -5,11 +5,23 @@ export interface VideoRow {
   title: string;
   description: string;
   video_source_url: string;
-  thumbnail_url: string | null;
+  thumbnail_url: string;
   duration_seconds: number;
   minimum_required_tier: SubscriptionTier;
   created_at: string;
+  info_hash?: string | null;
 }
+
+export type VideoCatalogRow = Pick<
+  VideoRow,
+  | "id"
+  | "title"
+  | "description"
+  | "thumbnail_url"
+  | "duration_seconds"
+  | "minimum_required_tier"
+  | "created_at"
+>;
 
 export interface Database {
   public: {

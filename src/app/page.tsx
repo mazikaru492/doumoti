@@ -2,7 +2,7 @@ import HeroSection from "@/components/HeroSection";
 import GenreSection from "@/components/GenreSection";
 import { createSupabaseServerClient } from "@/utils/supabase/server";
 import { type Video } from "@/lib/video-model";
-import { type VideoRow } from "@/types/database";
+import { type VideoCatalogRow } from "@/types/database";
 
 /**
  * ホームページ
@@ -15,7 +15,7 @@ export default async function HomePage() {
   const { data, error } = await supabase
     .from("videos")
     .select(
-      "id,title,description,video_source_url,thumbnail_url,duration_seconds,minimum_required_tier,created_at",
+      "id,title,description,thumbnail_url,duration_seconds,minimum_required_tier,created_at",
     )
     .order("created_at", { ascending: false });
 
@@ -32,12 +32,11 @@ export default async function HomePage() {
     );
   }
 
-  const allVideos: Video[] = ((data ?? []) as VideoRow[]).map((row) => ({
+  const allVideos: Video[] = ((data ?? []) as VideoCatalogRow[]).map((row) => ({
     id: row.id,
     title: row.title,
     description: row.description,
-    video_source_url: row.video_source_url,
-    thumbnail_url: row.thumbnail_url,
+    thumbnail_url: row.thumbnail_url || "",
     duration_seconds: row.duration_seconds,
     minimum_required_tier: row.minimum_required_tier,
     created_at: row.created_at,
