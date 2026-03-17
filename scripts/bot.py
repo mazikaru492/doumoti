@@ -6,6 +6,7 @@ import mimetypes
 import os
 import re
 import smtplib
+import subprocess
 import sys
 from collections import deque
 from email.mime.text import MIMEText
@@ -25,6 +26,14 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
 )
 logger = logging.getLogger("torrent-bot")
+
+
+ALLOWED_VIDEO_EXTENSIONS = {".mp4", ".mkv", ".avi", ".mov", ".webm"}
+DEFAULT_MIN_VIDEO_SIZE_BYTES = 50 * 1024 * 1024
+
+
+class SkipTask(Exception):
+    """Raised when a task should be skipped for security or validation reasons."""
 
 
 @dataclass
@@ -238,8 +247,10 @@ async def wait_until_complete(
     api: aria2p.API,
     gid: str,
     poll_seconds: float,
+    min_video_size_bytes: int,
 ) -> aria2p.Download:
     active_gid = gid
+    selection_applied_for_gids: set[str] = set()
     while True:
         download = api.get_download(active_gid)
 
@@ -255,6 +266,32 @@ async def wait_until_complete(
                 active_gid = next_gid
                 await asyncio.sleep(poll_seconds)
                 continue
+
+        if active_gid not in selection_applied_for_gids:
+            files = collect_download_files(download)
+            if files:
+                selected_indices = choose_video_file_indices_for_aria2(
+                    download,
+                    min_size_bytes=min_video_size_bytes,
+                )
+
+                if not selected_indices:
+                    logger.warning(
+                        "No safe video files matched whitelist/size for gid=%s. Cancelling download.",
+                        active_gid,
+                    )
+                    cancel_aria2_download(api, active_gid)
+                    raise SkipTask(
+                        "No allowed video file found in torrent (or all were below minimum size)."
+                    )
+
+                apply_aria2_select_file(api, active_gid, selected_indices)
+                selection_applied_for_gids.add(active_gid)
+                logger.info(
+                    "Applied aria2 select-file for gid=%s (video files=%s)",
+                    active_gid,
+                    ",".join(selected_indices),
+                )
 
         if download.is_complete:
             return download
@@ -277,6 +314,159 @@ async def wait_until_complete(
 
 def sanitize_storage_filename(file_name: str) -> str:
     return re.sub(r"[^A-Za-z0-9._-]", "_", file_name)
+
+
+def is_allowed_video_path(file_path: str) -> bool:
+    suffix = Path(file_path).suffix.lower()
+    return suffix in ALLOWED_VIDEO_EXTENSIONS
+
+
+def is_suspiciously_small(size_bytes: int, min_size_bytes: int) -> bool:
+    return size_bytes < min_size_bytes
+
+
+def collect_download_files(download: aria2p.Download) -> list[dict[str, Any]]:
+    result: list[dict[str, Any]] = []
+    for idx, file_obj in enumerate(download.files, start=1):
+        index_value = str(getattr(file_obj, "index", idx))
+        path_value = str(getattr(file_obj, "path", "") or "")
+        length_value = int(getattr(file_obj, "length", 0) or 0)
+        result.append(
+            {
+                "index": index_value,
+                "path": path_value,
+                "length": length_value,
+                "is_video": is_allowed_video_path(path_value),
+            }
+        )
+    return result
+
+
+def choose_video_file_indices_for_aria2(
+    download: aria2p.Download,
+    *,
+    min_size_bytes: int,
+) -> list[str]:
+    candidates: list[str] = []
+    for item in collect_download_files(download):
+        if not item["is_video"]:
+            continue
+
+        length = int(item["length"])
+        # Metadata length can be unknown (0) before full fetch; strict size gate is enforced after completion.
+        if length > 0 and is_suspiciously_small(length, min_size_bytes):
+            continue
+
+        candidates.append(item["index"])
+
+    return candidates
+
+
+def apply_aria2_select_file(api: aria2p.API, gid: str, indices: list[str]) -> None:
+    select_value = ",".join(indices)
+
+    try:
+        api.client.change_option(gid, {"select-file": select_value})
+        return
+    except Exception:  # noqa: BLE001
+        pass
+
+    # Fallback for aria2p variants.
+    try:
+        api.change_option(gid, {"select-file": select_value})
+        return
+    except Exception as exc:  # noqa: BLE001
+        raise RuntimeError(f"Failed to apply select-file for gid={gid}: {exc}") from exc
+
+
+def cancel_aria2_download(api: aria2p.API, gid: str) -> None:
+    try:
+        api.client.force_remove(gid)
+    except Exception:  # noqa: BLE001
+        logger.warning("Could not force-remove gid=%s", gid)
+
+    try:
+        api.client.remove_download_result(gid)
+    except Exception:  # noqa: BLE001
+        logger.warning("Could not remove download result gid=%s", gid)
+
+
+def ensure_safe_video_file(path_value: str, min_size_bytes: int) -> None:
+    path = Path(path_value)
+    if not path.exists():
+        raise RuntimeError(f"Downloaded file not found: {path}")
+
+    if not is_allowed_video_path(str(path)):
+        raise SkipTask(f"Primary file has disallowed extension: {path.name}")
+
+    size_bytes = path.stat().st_size
+    if is_suspiciously_small(size_bytes, min_size_bytes):
+        raise SkipTask(
+            f"Primary video is suspiciously small ({size_bytes} bytes < {min_size_bytes} bytes): {path.name}"
+        )
+
+
+def sanitize_video_with_ffmpeg(local_file_path: str) -> str:
+    source = Path(local_file_path)
+    if not source.exists():
+        raise RuntimeError(f"File not found for ffmpeg sanitize: {local_file_path}")
+
+    sanitized_path = source.with_suffix(".sanitized.mp4")
+
+    cmd = [
+        "ffmpeg",
+        "-y",
+        "-v",
+        "error",
+        "-i",
+        str(source),
+        "-map",
+        "0:v:0",
+        "-map",
+        "0:a?",
+        "-dn",
+        "-sn",
+        "-map_metadata",
+        "-1",
+        "-map_chapters",
+        "-1",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "medium",
+        "-crf",
+        "23",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "128k",
+        "-movflags",
+        "+faststart",
+        str(sanitized_path),
+    ]
+
+    try:
+        subprocess.run(cmd, check=True, capture_output=True, text=True)
+    except FileNotFoundError as exc:
+        raise RuntimeError("ffmpeg command not found. Please install ffmpeg and ensure it is in PATH.") from exc
+    except subprocess.CalledProcessError as exc:
+        stderr = (exc.stderr or "").strip()
+        raise RuntimeError(f"ffmpeg sanitize failed: {stderr}") from exc
+
+    if not sanitized_path.exists() or sanitized_path.stat().st_size <= 0:
+        raise RuntimeError(f"Sanitized file was not created correctly: {sanitized_path}")
+
+    return str(sanitized_path)
+
+
+def cleanup_local_files(*paths: Optional[str]) -> None:
+    for path in paths:
+        if not path:
+            continue
+        try:
+            cleanup_local_file(path)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Failed to remove local file %s: %s", path, exc)
 
 
 def resolve_public_url(value: Any) -> str:
@@ -549,6 +739,9 @@ async def run() -> None:
     poll_seconds = float(os.getenv("TORRENT_POLL_SECONDS", "5"))
     max_downloads_per_window = int(os.getenv("TORRENT_MAX_DOWNLOADS", "6"))
     rate_window_seconds = float(os.getenv("TORRENT_RATE_WINDOW_SECONDS", "1800"))
+    min_video_size_bytes = int(
+        os.getenv("TORRENT_MIN_VIDEO_SIZE_BYTES", str(DEFAULT_MIN_VIDEO_SIZE_BYTES))
+    )
 
     tasks = parse_tasks_file(tasks_path)
     supabase = create_supabase_admin_client()
@@ -561,6 +754,11 @@ async def run() -> None:
         max_downloads_per_window,
         rate_window_seconds,
     )
+    logger.info(
+        "Security filter: extensions=%s, min_video_size=%d bytes",
+        ",".join(sorted(ALLOWED_VIDEO_EXTENSIONS)),
+        min_video_size_bytes,
+    )
 
     imported = 0
     skipped = 0
@@ -568,6 +766,8 @@ async def run() -> None:
 
     for idx, task in enumerate(tasks, start=1):
         logger.info("Task %d/%d start", idx, len(tasks))
+        local_file_path: Optional[str] = None
+        sanitized_file_path: Optional[str] = None
 
         try:
             meta = infer_meta(task)
@@ -595,12 +795,17 @@ async def run() -> None:
                 api=aria2,
                 gid=download.gid,
                 poll_seconds=poll_seconds,
+                min_video_size_bytes=min_video_size_bytes,
             )
 
             local_file_path = pick_primary_file(completed)
+            ensure_safe_video_file(local_file_path, min_video_size_bytes)
+
+            sanitized_file_path = sanitize_video_with_ffmpeg(local_file_path)
+
             source_url, object_path = upload_to_storage_and_get_public_url(
                 supabase,
-                local_file_path=local_file_path,
+                local_file_path=sanitized_file_path,
                 info_hash=meta.info_hash,
             )
             logger.info("Uploaded to storage path=%s", object_path)
@@ -627,11 +832,17 @@ async def run() -> None:
                 task.title or generated_metadata.title,
             )
 
-            if cleanup_enabled:
-                cleanup_local_file(local_file_path)
+            # Security requirement: always remove both original and sanitized files after upload.
+            cleanup_local_files(local_file_path, sanitized_file_path)
+        except SkipTask as exc:
+            skipped += 1
+            logger.warning("Skip task for security policy: %s", exc)
+            cleanup_local_files(local_file_path, sanitized_file_path)
         except Exception as exc:  # noqa: BLE001
             failed += 1
             logger.exception("Task failed: %s", exc)
+            if cleanup_enabled:
+                cleanup_local_files(local_file_path, sanitized_file_path)
 
     logger.info("Done: imported=%d skipped=%d failed=%d", imported, skipped, failed)
 
