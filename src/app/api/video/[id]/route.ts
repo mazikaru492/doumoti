@@ -17,8 +17,8 @@ export async function GET(request: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Video not found" }, { status: 404 });
   }
 
-  const auth = getAuthContextFromRequest(request);
-  const entitlement = buildEntitlement({
+  const auth = await getAuthContextFromRequest(request);
+  const entitlement = await buildEntitlement({
     userId: auth.userId,
     plan: auth.plan,
     videoId: id,

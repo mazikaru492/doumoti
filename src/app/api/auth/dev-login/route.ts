@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
   }
 
   const plan = normalizePlan(body?.plan);
-  const user = setUserPlan(userId, plan);
+  const user = await setUserPlan(userId, plan);
   const token = createSessionToken(user.userId);
 
   const response = NextResponse.json({

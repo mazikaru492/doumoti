@@ -48,7 +48,7 @@ export async function GET(request: NextRequest, { params }: Params) {
     );
   }
 
-  const auth = getAuthContextFromRequest(request);
+  const auth = await getAuthContextFromRequest(request);
   if (auth.userId !== claims.sub) {
     return NextResponse.json(
       { error: "Playback token does not belong to this session" },
@@ -157,7 +157,7 @@ async function handleProtectedResource(
     );
   }
 
-  const auth = getAuthContextFromRequest(request);
+  const auth = await getAuthContextFromRequest(request);
   if (auth.userId !== claims.sub) {
     return NextResponse.json(
       { error: "Segment token does not belong to this session" },

@@ -14,7 +14,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
   }
 
-  const auth = getAuthContextFromRequest(request);
+  const auth = await getAuthContextFromRequest(request);
   if (auth.plan !== "general") {
     return NextResponse.json(
       { error: "Ad grant is only for General plan" },
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     );
   }
 
-  const source = grantAdSessionPlayback({
+  const source = await grantAdSessionPlayback({
     adSessionId: body.adSessionId,
     userId: auth.userId,
     videoId: id,

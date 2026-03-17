@@ -73,21 +73,11 @@ export async function GET(request: NextRequest, { params }: Params) {
     );
   }
 
-  const { data: profile, error: profileError } = await supabase
+  const { data: profile } = await supabase
     .from("profiles")
     .select("subscription_tier")
     .eq("id", user.id)
     .maybeSingle<ProfileRow>();
-
-  if (profileError) {
-    return NextResponse.json(
-      {
-        error: "PROFILE_LOOKUP_FAILED",
-        message: "プロフィール情報の取得に失敗しました。",
-      },
-      { status: 500 },
-    );
-  }
 
   const userTier = isTier(profile?.subscription_tier)
     ? profile.subscription_tier

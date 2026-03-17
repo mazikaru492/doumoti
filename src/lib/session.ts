@@ -34,12 +34,16 @@ export async function getAuthContextFromCookieStore(): Promise<AuthContext> {
   return getAuthContextFromToken(token);
 }
 
-export function getAuthContextFromRequest(request: NextRequest): AuthContext {
+export async function getAuthContextFromRequest(
+  request: NextRequest,
+): Promise<AuthContext> {
   const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
   return getAuthContextFromToken(token);
 }
 
-function getAuthContextFromToken(token: string | undefined): AuthContext {
+async function getAuthContextFromToken(
+  token: string | undefined,
+): Promise<AuthContext> {
   if (!token) {
     return {
       isAuthenticated: false,
@@ -61,7 +65,7 @@ function getAuthContextFromToken(token: string | undefined): AuthContext {
     };
   }
 
-  const user = getOrCreateUser(claims.userId);
+  const user = await getOrCreateUser(claims.userId);
   return {
     isAuthenticated: true,
     userId: user.userId,

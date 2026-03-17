@@ -20,8 +20,16 @@ $$;
 CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   subscription_tier public.subscription_tier NOT NULL DEFAULT 'NORMAL',
+  stripe_customer_id TEXT UNIQUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE public.profiles
+ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_profiles_stripe_customer_id
+  ON public.profiles(stripe_customer_id)
+  WHERE stripe_customer_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS public.videos (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -34,8 +42,21 @@ CREATE TABLE IF NOT EXISTS public.videos (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS public.preview_windows (
+  id BIGSERIAL PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  video_id UUID NOT NULL REFERENCES public.videos(id) ON DELETE CASCADE,
+  window_started_at TIMESTAMPTZ NOT NULL,
+  window_ends_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (user_id, video_id),
+  CHECK (window_ends_at > window_started_at)
+);
+
 CREATE INDEX IF NOT EXISTS idx_profiles_tier ON public.profiles(subscription_tier);
 CREATE INDEX IF NOT EXISTS idx_videos_tier ON public.videos(minimum_required_tier);
+CREATE INDEX IF NOT EXISTS idx_preview_windows_user_video
+  ON public.preview_windows(user_id, video_id);
 
 -- Optional but recommended: auto-create profile when auth.users row is created.
 CREATE OR REPLACE FUNCTION public.handle_new_user()

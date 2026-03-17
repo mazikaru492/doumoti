@@ -8,6 +8,7 @@ import {
   type SubscriptionPlan,
 } from "@/lib/subscription";
 import { signClaims, verifyClaims } from "@/lib/security";
+import { createSupabaseAdminClient } from "@/utils/supabase/admin";
 
 export type PlaybackQuality = "sd" | "hd";
 
@@ -30,7 +31,6 @@ type AdSession = {
 };
 
 const adSessionStore = new Map<string, AdSession>();
-const previewWindowStore = new Map<string, { endsAtSec: number }>();
 
 async function streamCatalog(
   videoId: string,
@@ -98,11 +98,11 @@ export async function resolvePlayableSource(
   return quality === "hd" ? variants.hd : variants.sd;
 }
 
-export function buildEntitlement(params: {
+export async function buildEntitlement(params: {
   userId: string;
   videoId: string;
   plan: SubscriptionPlan;
-}): {
+}): Promise<{
   plan: SubscriptionPlan;
   adRequired: boolean;
   canAccessHighQuality: boolean;
@@ -119,7 +119,7 @@ export function buildEntitlement(params: {
           Record<PlaybackQuality, { url: string; expiresAt: number }>
         >;
       };
-} {
+}> {
   const plan = params.plan;
   const adRequired = isAdRequired(plan);
   const defaultQuality = defaultPlaybackQuality(plan);
@@ -151,13 +151,18 @@ export function buildEntitlement(params: {
     Record<PlaybackQuality, { url: string; expiresAt: number }>
   > = {};
 
-  const sdSource = buildSignedSource(params.userId, params.videoId, plan, "sd");
+  const sdSource = await buildSignedSource(
+    params.userId,
+    params.videoId,
+    plan,
+    "sd",
+  );
   if (sdSource) {
     sources.sd = sdSource;
   }
 
   if (canAccessHighQuality(plan)) {
-    const hdSource = buildSignedSource(
+    const hdSource = await buildSignedSource(
       params.userId,
       params.videoId,
       plan,
@@ -181,12 +186,12 @@ export function buildEntitlement(params: {
   };
 }
 
-export function grantAdSessionPlayback(params: {
+export async function grantAdSessionPlayback(params: {
   adSessionId: string;
   userId: string;
   videoId: string;
   minimumWatchMs?: number;
-}): { url: string; expiresAt: number } | null {
+}): Promise<{ url: string; expiresAt: number } | null> {
   const adSession = adSessionStore.get(params.adSessionId);
   if (!adSession) {
     return null;
@@ -218,12 +223,12 @@ export function grantAdSessionPlayback(params: {
   return buildSignedSource(params.userId, params.videoId, "general", "sd");
 }
 
-function buildSignedSource(
+async function buildSignedSource(
   userId: string,
   videoId: string,
   plan: SubscriptionPlan,
   quality: PlaybackQuality,
-): { url: string; expiresAt: number } | null {
+): Promise<{ url: string; expiresAt: number } | null> {
   if (quality === "hd" && !canAccessHighQuality(plan)) {
     throw new Error("forbidden-quality");
   }
@@ -233,14 +238,7 @@ function buildSignedSource(
   let previewWindowEndSec: number | undefined;
 
   if (plan === "normal") {
-    const key = `${userId}:${videoId}`;
-    const existingWindow = previewWindowStore.get(key);
-    const endsAtSec =
-      existingWindow?.endsAtSec ?? nowSec + NORMAL_PREVIEW_SECONDS;
-
-    if (!existingWindow) {
-      previewWindowStore.set(key, { endsAtSec });
-    }
+    const endsAtSec = await getOrCreatePreviewWindowEndSec(userId, videoId);
 
     const remainingSec = endsAtSec - nowSec;
     if (remainingSec <= 0) {
@@ -264,6 +262,49 @@ function buildSignedSource(
     url: `/api/video/${videoId}/stream?token=${encodeURIComponent(token)}`,
     expiresAt,
   };
+}
+
+async function getOrCreatePreviewWindowEndSec(
+  userId: string,
+  videoId: string,
+): Promise<number> {
+  const now = new Date();
+  const defaultEndsAtSec =
+    Math.floor(now.getTime() / 1000) + NORMAL_PREVIEW_SECONDS;
+  const admin = createSupabaseAdminClient();
+
+  await admin.from("preview_windows").upsert(
+    {
+      user_id: userId,
+      video_id: videoId,
+      window_started_at: now.toISOString(),
+      window_ends_at: new Date(
+        now.getTime() + NORMAL_PREVIEW_SECONDS * 1000,
+      ).toISOString(),
+    },
+    {
+      onConflict: "user_id,video_id",
+      ignoreDuplicates: true,
+    },
+  );
+
+  const { data, error } = await admin
+    .from("preview_windows")
+    .select("window_ends_at")
+    .eq("user_id", userId)
+    .eq("video_id", videoId)
+    .maybeSingle<{ window_ends_at: string }>();
+
+  if (error || !data?.window_ends_at) {
+    return defaultEndsAtSec;
+  }
+
+  const endsAtMs = Date.parse(data.window_ends_at);
+  if (!Number.isFinite(endsAtMs)) {
+    return defaultEndsAtSec;
+  }
+
+  return Math.floor(endsAtMs / 1000);
 }
 
 function cryptoRandomId(): string {

@@ -12,9 +12,15 @@ export const runtime = "nodejs";
 const PREVIEW_SECONDS = 60;
 const MP4_MAX_BYTES = 24 * 1024 * 1024;
 
+type Tier = "NORMAL" | "GENERAL" | "VIP";
+
 type VideoRow = {
   id: string;
   video_source_url: string;
+};
+
+type ProfileRow = {
+  subscription_tier: Tier;
 };
 
 interface Params {
@@ -23,6 +29,10 @@ interface Params {
 
 function isSafeVideoId(videoId: string): boolean {
   return /^[a-f0-9-]{36}$/i.test(videoId);
+}
+
+function isTier(value: string | null | undefined): value is Tier {
+  return value === "NORMAL" || value === "GENERAL" || value === "VIP";
 }
 
 function isM3u8Path(sourceUrl: string): boolean {
@@ -274,6 +284,26 @@ export async function GET(request: NextRequest, { params }: Params) {
 
   if (!user) {
     return NextResponse.json({ error: "AUTH_REQUIRED" }, { status: 401 });
+  }
+
+  let userTier: Tier = "NORMAL";
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("subscription_tier")
+    .eq("id", user.id)
+    .maybeSingle<ProfileRow>();
+
+  if (!profileError && isTier(profile?.subscription_tier)) {
+    userTier = profile.subscription_tier;
+  }
+
+  if (userTier !== "NORMAL") {
+    return NextResponse.json(
+      {
+        error: "PREVIEW_NOT_ALLOWED_FOR_PLAN",
+      },
+      { status: 403 },
+    );
   }
 
   const check = verifyVideoUrl({

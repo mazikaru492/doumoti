@@ -101,8 +101,8 @@ export async function POST(request: NextRequest) {
         : null;
 
     if (typeof userId === "string" && typeof customerId === "string") {
-      attachStripeCustomer(userId, customerId);
-      setUserPlan(userId, normalizePlan(extractPlanFromPriceId(priceId)));
+      await attachStripeCustomer(userId, customerId);
+      await setUserPlan(userId, normalizePlan(extractPlanFromPriceId(priceId)));
     }
   }
 
@@ -116,15 +116,15 @@ export async function POST(request: NextRequest) {
     const priceId = object.items?.data?.[0]?.price?.id;
 
     if (typeof customerId === "string") {
-      const user = findUserByStripeCustomerId(customerId);
+      const user = await findUserByStripeCustomerId(customerId);
       if (user) {
         if (status === "active" || status === "trialing") {
-          setUserPlan(
+          await setUserPlan(
             user.userId,
             normalizePlan(extractPlanFromPriceId(priceId)),
           );
         } else {
-          setUserPlan(user.userId, "normal");
+          await setUserPlan(user.userId, "normal");
         }
       }
     }
