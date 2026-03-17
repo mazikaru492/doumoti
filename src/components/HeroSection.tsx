@@ -15,17 +15,23 @@ interface HeroSectionProps {
  * 「今すぐ再生」と「詳細を見る」のCTAボタン。
  */
 export default function HeroSection({ video }: HeroSectionProps) {
+  const thumbnailSrc = video.thumbnail_url?.trim() || null;
+
   return (
     <section className="relative w-full h-[70vh] min-h-[500px] max-h-[800px] overflow-hidden">
-      {/* 背景画像 */}
-      <Image
-        src={video.thumbnail_url}
-        alt={video.title}
-        fill
-        priority
-        sizes="100vw"
-        className="object-cover"
-      />
+      {/* 背景画像 / フォールバック */}
+      {thumbnailSrc ? (
+        <Image
+          src={thumbnailSrc}
+          alt={video.title}
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover"
+        />
+      ) : (
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,#334155,transparent_45%),radial-gradient(circle_at_80%_30%,#0f766e,transparent_40%),linear-gradient(135deg,#020617,#111827,#1e293b)]" />
+      )}
 
       {/* グラデーションオーバーレイ */}
       <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/60 to-transparent" />

@@ -2,6 +2,7 @@ import HeroSection from "@/components/HeroSection";
 import GenreSection from "@/components/GenreSection";
 import { createSupabaseServerClient } from "@/utils/supabase/server";
 import { type Video } from "@/lib/video-model";
+import { type VideoRow } from "@/types/database";
 
 /**
  * ホームページ
@@ -14,7 +15,7 @@ export default async function HomePage() {
   const { data, error } = await supabase
     .from("videos")
     .select(
-      "id,title,description,thumbnail_url,duration_seconds,minimum_required_tier,created_at",
+      "id,title,description,video_source_url,thumbnail_url,duration_seconds,minimum_required_tier,created_at",
     )
     .order("created_at", { ascending: false });
 
@@ -31,14 +32,25 @@ export default async function HomePage() {
     );
   }
 
-  const allVideos = (data ?? []) as Video[];
+  const allVideos: Video[] = ((data ?? []) as VideoRow[]).map((row) => ({
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    video_source_url: row.video_source_url,
+    thumbnail_url: row.thumbnail_url,
+    duration_seconds: row.duration_seconds,
+    minimum_required_tier: row.minimum_required_tier,
+    created_at: row.created_at,
+  }));
 
   if (allVideos.length === 0) {
     return (
       <section className="mx-auto max-w-5xl px-6 py-20 text-foreground">
-        <h1 className="text-2xl font-semibold text-white">動画がありません</h1>
+        <h1 className="text-2xl font-semibold text-white">
+          現在動画を準備中です
+        </h1>
         <p className="mt-3 text-sm text-zinc-300">
-          まだ動画が登録されていません。管理画面またはインポートスクリプトから追加してください。
+          新しい作品を順次追加しています。しばらくしてからもう一度ご確認ください。
         </p>
       </section>
     );

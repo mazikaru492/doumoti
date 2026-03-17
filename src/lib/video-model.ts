@@ -1,13 +1,16 @@
-export type SubscriptionTier = "NORMAL" | "GENERAL" | "VIP";
+import type { VideoRow } from "@/types/database";
+
+export type SubscriptionTier = VideoRow["minimum_required_tier"];
 
 export type Video = {
   id: string;
   title: string;
   description: string;
-  thumbnail_url: string;
+  video_source_url: string;
+  thumbnail_url: string | null;
   duration_seconds: number;
   minimum_required_tier: SubscriptionTier;
-  created_at?: string;
+  created_at: string;
 };
 
 export function formatDuration(seconds: number): string {

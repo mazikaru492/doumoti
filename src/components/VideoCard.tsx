@@ -14,6 +14,8 @@ interface VideoCardProps {
  * サムネイル上に再生時間オーバーレイ + 再生アイコン
  */
 export default function VideoCard({ video }: VideoCardProps) {
+  const thumbnailSrc = video.thumbnail_url?.trim() || null;
+
   return (
     <Link
       href={`/video/${video.id}`}
@@ -21,13 +23,21 @@ export default function VideoCard({ video }: VideoCardProps) {
     >
       {/* サムネイル */}
       <div className="relative aspect-video overflow-hidden">
-        <Image
-          src={video.thumbnail_url}
-          alt={video.title}
-          fill
-          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-          className="object-cover transition-transform duration-500 group-hover:scale-110"
-        />
+        {thumbnailSrc ? (
+          <Image
+            src={thumbnailSrc}
+            alt={video.title}
+            fill
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+            className="object-cover transition-transform duration-500 group-hover:scale-110"
+          />
+        ) : (
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_25%,#1d4ed8,transparent_45%),radial-gradient(circle_at_75%_70%,#9333ea,transparent_45%),linear-gradient(160deg,#111827,#1f2937,#0f172a)]">
+            <div className="absolute inset-0 flex items-center justify-center text-white/80 text-xs font-semibold tracking-wide">
+              NO THUMBNAIL
+            </div>
+          </div>
+        )}
 
         {/* 再生アイコンオーバーレイ */}
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-300 flex items-center justify-center">
