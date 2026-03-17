@@ -5,8 +5,10 @@ import logging
 import mimetypes
 import os
 import re
+import smtplib
 import sys
 from collections import deque
+from email.mime.text import MIMEText
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
@@ -499,6 +501,44 @@ async def acquire_rate_limit_slot(
         await asyncio.sleep(wait_seconds)
 
 
+def send_notification_email(video_title: str) -> None:
+    """Send an email notification after a video has been downloaded and registered.
+
+    Requires SMTP_USER and SMTP_PASSWORD environment variables to be set.
+    If they are not configured, the notification is silently skipped so that
+    the core pipeline is never interrupted.
+    """
+    smtp_user = os.getenv("SMTP_USER")
+    smtp_password = os.getenv("SMTP_PASSWORD")
+
+    if not smtp_user or not smtp_password:
+        logger.info("SMTP_USER / SMTP_PASSWORD not set. Skipping email notification.")
+        return
+
+    to_address = "yukijkbvdn@gmail.com"
+    subject = "新しい動画をダウンロードしました"
+    body = (
+        f"以下の動画のダウンロードとDB登録が完了しました。\n\n"
+        f"タイトル: {video_title}\n"
+    )
+
+    msg = MIMEText(body, "plain", "utf-8")
+    msg["Subject"] = subject
+    msg["From"] = smtp_user
+    msg["To"] = to_address
+
+    try:
+        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+            server.ehlo()
+            server.starttls()
+            server.ehlo()
+            server.login(smtp_user, smtp_password)
+            server.sendmail(smtp_user, [to_address], msg.as_string())
+        logger.info("Notification email sent for: %s", video_title)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Failed to send notification email (%s). Continuing.", exc)
+
+
 async def run() -> None:
     load_env()
 
@@ -574,6 +614,11 @@ async def run() -> None:
                 source_url=source_url,
                 generated_metadata=generated_metadata,
             )
+
+            # --- Email notification (added; does not affect core logic) ---
+            notification_title = task.title or generated_metadata.title or "Untitled"
+            send_notification_email(notification_title)
+            # --------------------------------------------------------------
 
             imported += 1
             logger.info(
