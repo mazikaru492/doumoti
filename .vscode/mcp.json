@@ -2,7 +2,10 @@
   "servers": {
     "supabase": {
       "type": "http",
-      "url": "https://mcp.supabase.com/mcp?project_ref=bfirkfzwgyqbriemhbxv&read_only=true&features=docs%2Cdatabase"
+      "url": "https://mcp.supabase.com/mcp?project_ref=bfirkfzwgyqbriemhbxv&read_only=true&features=docs%2Cdatabase",
+      "headers": {
+        "Authorization": "Bearer sbp_37b6c25087494394a4ad23e7616c2e27af72e4f6"
+      }
     }
   }
 }
