@@ -1,14 +1,78 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Play } from "lucide-react";
+import { Play, Lock, Crown } from "lucide-react";
 import { type Video, formatDuration } from "@/lib/video-model";
 
 interface VideoCardProps {
   video: Video;
+  isLocked?: boolean;
 }
 
-export default function VideoCard({ video }: VideoCardProps) {
+export default function VideoCard({ video, isLocked = false }: VideoCardProps) {
   const thumbnailSrc = video.thumbnail_url?.trim() || null;
+  const tier = video.minimum_required_tier;
+
+  const tierLabel: Record<string, string> = {
+    NORMAL: "無料",
+    GENERAL: "General",
+    VIP: "VIP",
+  };
+
+  const tierColor: Record<string, string> = {
+    NORMAL: "bg-zinc-700",
+    GENERAL: "bg-blue-600",
+    VIP: "bg-gradient-to-r from-amber-500 to-yellow-400 text-black",
+  };
+
+  if (isLocked) {
+    return (
+      <Link
+        href="/pricing"
+        className="block group relative rounded-md overflow-hidden bg-zinc-900 transition-transform duration-300 hover:scale-105 hover:z-10"
+      >
+        {/* サムネイル (ぼかし) */}
+        <div className="relative aspect-video overflow-hidden">
+          {thumbnailSrc ? (
+            <Image
+              src={thumbnailSrc}
+              alt={video.title}
+              fill
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+              className="object-cover blur-sm brightness-50"
+            />
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-br from-zinc-800 via-zinc-900 to-black blur-sm" />
+          )}
+
+          {/* ロックオーバーレイ */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60">
+            <div className="w-14 h-14 rounded-full bg-zinc-800/90 flex items-center justify-center mb-2 border border-zinc-600">
+              <Lock className="w-6 h-6 text-zinc-400" />
+            </div>
+            <span className="text-white text-xs font-bold px-3 py-1 rounded-full bg-primary">
+              {tierLabel[tier]}プランに登録
+            </span>
+          </div>
+
+          {/* ティアバッジ */}
+          <div className={`absolute top-2 left-2 text-white text-xs font-bold px-2 py-0.5 rounded ${tierColor[tier]}`}>
+            {tier === "VIP" && <Crown className="w-3 h-3 inline mr-1" />}
+            {tierLabel[tier]}
+          </div>
+        </div>
+
+        {/* メタ情報 */}
+        <div className="p-2 bg-zinc-900 group-hover:bg-zinc-800 transition-colors">
+          <h3 className="text-white font-medium text-sm line-clamp-1">
+            {video.title}
+          </h3>
+          <p className="text-zinc-500 text-xs mt-0.5 line-clamp-1">
+            アップグレードして視聴
+          </p>
+        </div>
+      </Link>
+    );
+  }
 
   return (
     <Link
@@ -44,9 +108,17 @@ export default function VideoCard({ video }: VideoCardProps) {
         <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs font-medium px-1.5 py-0.5 rounded">
           {formatDuration(video.duration_seconds)}
         </div>
+
+        {/* ティアバッジ (NORMAL以外) */}
+        {tier !== "NORMAL" && (
+          <div className={`absolute top-2 left-2 text-white text-xs font-bold px-2 py-0.5 rounded ${tierColor[tier]}`}>
+            {tier === "VIP" && <Crown className="w-3 h-3 inline mr-1" />}
+            {tierLabel[tier]}
+          </div>
+        )}
       </div>
 
-      {/* メタ情報 - シンプルに */}
+      {/* メタ情報 */}
       <div className="p-2 bg-zinc-900 group-hover:bg-zinc-800 transition-colors">
         <h3 className="text-white font-medium text-sm line-clamp-1">
           {video.title}

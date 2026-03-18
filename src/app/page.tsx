@@ -4,8 +4,43 @@ import { createSupabaseServerClient } from "@/utils/supabase/server";
 import { type Video } from "@/lib/video-model";
 import { type VideoCatalogRow } from "@/types/database";
 
+type Tier = "NORMAL" | "GENERAL" | "VIP";
+
+function canAccessTier(userTier: Tier | null, requiredTier: Tier): boolean {
+  if (!userTier) return requiredTier === "NORMAL";
+
+  const tierOrder: Record<Tier, number> = {
+    NORMAL: 0,
+    GENERAL: 1,
+    VIP: 2,
+  };
+
+  return tierOrder[userTier] >= tierOrder[requiredTier];
+}
+
 export default async function HomePage() {
   const supabase = await createSupabaseServerClient();
+
+  // ユーザー認証情報を取得
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let userTier: Tier | null = null;
+
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("subscription_tier")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    const tier = profile?.subscription_tier;
+    if (tier === "NORMAL" || tier === "GENERAL" || tier === "VIP") {
+      userTier = tier;
+    }
+  }
+
   const { data, error } = await supabase
     .from("videos")
     .select(
@@ -53,9 +88,13 @@ export default async function HomePage() {
     );
   }
 
-  const [heroVideo, ...remainingVideos] = allVideos;
+  // ユーザーがアクセスできる動画でヒーローを選択
+  const accessibleVideos = allVideos.filter((video) =>
+    canAccessTier(userTier, video.minimum_required_tier)
+  );
+  const heroVideo = accessibleVideos[0] || allVideos[0];
 
-  const recentlyAdded = remainingVideos.slice(0, 10);
+  const recentlyAdded = allVideos.slice(0, 10);
 
   const normalVideos = allVideos.filter(
     (video) => video.minimum_required_tier === "NORMAL",
@@ -72,17 +111,22 @@ export default async function HomePage() {
       {/* ヒーローバナー */}
       <HeroSection video={heroVideo} />
 
-      {/* カルーセルセクション - ヒーローセクションに重なる */}
+      {/* カルーセルセクション */}
       <div className="relative z-10 -mt-32 sm:-mt-40 pb-20 space-y-2">
         {/* 最近追加された作品 */}
-        <GenreSection genre="最近追加された作品" videos={recentlyAdded} />
+        <GenreSection
+          genre="最近追加された作品"
+          videos={recentlyAdded}
+          userTier={userTier}
+        />
 
         {/* 無料で視聴可能 */}
         {normalVideos.length > 0 && (
           <GenreSection
             id="normal"
-            genre="無料で視聴可能"
+            genre="無料で視聴"
             videos={normalVideos}
+            userTier={userTier}
           />
         )}
 
@@ -90,18 +134,26 @@ export default async function HomePage() {
         {generalVideos.length > 0 && (
           <GenreSection
             id="general"
-            genre="Generalプラン限定"
+            genre="Generalプラン"
             videos={generalVideos}
+            userTier={userTier}
+            requiresUpgrade={!canAccessTier(userTier, "GENERAL")}
           />
         )}
 
         {/* VIP限定 */}
         {vipVideos.length > 0 && (
-          <GenreSection id="vip" genre="VIPプラン限定" videos={vipVideos} />
+          <GenreSection
+            id="vip"
+            genre="VIPプラン"
+            videos={vipVideos}
+            userTier={userTier}
+            requiresUpgrade={!canAccessTier(userTier, "VIP")}
+          />
         )}
 
         {/* 全作品 */}
-        <GenreSection genre="すべての作品" videos={allVideos} />
+        <GenreSection genre="すべての作品" videos={allVideos} userTier={userTier} />
       </div>
     </main>
   );
