@@ -7,16 +7,56 @@ import { getSupabaseBrowserClient } from "@/utils/supabase/client";
 
 type AuthMode = "signin" | "signup";
 
-function validateInput(email: string, password: string): string | null {
-  if (!email.includes("@")) {
-    return "メールアドレスの形式が正しくありません。";
-  }
+// 入力サニタイズ（SQLインジェクション対策）
+function sanitizeInput(input: string): string {
+  // 危険な文字をエスケープ
+  return input
+    .replace(/[<>]/g, "") // HTMLタグを除去
+    .trim();
+}
 
+// メールアドレスの厳密なバリデーション
+function isValidEmail(email: string): boolean {
+  const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+  return emailRegex.test(email) && email.length <= 254;
+}
+
+// パスワード強度チェック（新規登録用）
+function validatePasswordStrength(password: string): string | null {
   if (password.length < 8) {
     return "パスワードは8文字以上で入力してください。";
   }
 
+  const uppercaseCount = (password.match(/[A-Z]/g) || []).length;
+  if (uppercaseCount < 2) {
+    return "パスワードには大文字を2文字以上含めてください。";
+  }
+
+  const digitCount = (password.match(/[0-9]/g) || []).length;
+  if (digitCount < 2) {
+    return "パスワードには数字を2文字以上含めてください。";
+  }
+
   return null;
+}
+
+function validateInput(email: string, password: string, mode: AuthMode): string | null {
+  const sanitizedEmail = sanitizeInput(email);
+
+  if (!isValidEmail(sanitizedEmail)) {
+    return "メールアドレスの形式が正しくありません。";
+  }
+
+  // ログイン時は基本的なパスワードチェックのみ
+  if (mode === "signin") {
+    if (password.length < 1) {
+      return "パスワードを入力してください。";
+    }
+    return null;
+  }
+
+  // 新規登録時は厳密なパスワードチェック
+  return validatePasswordStrength(password);
 }
 
 function explainAuthError(message: string): string {
@@ -104,18 +144,48 @@ export default function LoginPage() {
   });
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [emailSent, setEmailSent] = useState(false);
   const tabIndex = mode === "signin" ? 0 : 1;
+
+  // パスワード強度インジケーター
+  const passwordStrength = useMemo(() => {
+    if (mode !== "signup" || !password) return null;
+
+    const hasLength = password.length >= 8;
+    const uppercaseCount = (password.match(/[A-Z]/g) || []).length;
+    const digitCount = (password.match(/[0-9]/g) || []).length;
+
+    return {
+      hasLength,
+      hasUppercase: uppercaseCount >= 2,
+      hasDigits: digitCount >= 2,
+      uppercaseCount,
+      digitCount,
+    };
+  }, [password, mode]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
 
-    const validation = validateInput(email, password);
+    // 入力をサニタイズ
+    const sanitizedEmail = sanitizeInput(email);
+
+    const validation = validateInput(sanitizedEmail, password, mode);
     if (validation) {
       setError(validation);
       return;
+    }
+
+    // 新規登録時はパスワード確認をチェック
+    if (mode === "signup") {
+      if (password !== confirmPassword) {
+        setError("パスワードが一致しません。");
+        return;
+      }
     }
 
     setPending(true);
@@ -124,7 +194,7 @@ export default function LoginPage() {
     try {
       if (mode === "signin") {
         const { error: signInError } = await supabase.auth.signInWithPassword({
-          email,
+          email: sanitizedEmail,
           password,
         });
 
@@ -138,9 +208,13 @@ export default function LoginPage() {
         return;
       }
 
+      // 新規登録時はメール確認を必須にする
       const { data, error: signUpError } = await supabase.auth.signUp({
-        email,
+        email: sanitizedEmail,
         password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`,
+        },
       });
 
       if (signUpError) {
@@ -155,18 +229,13 @@ export default function LoginPage() {
         return;
       }
 
+      // メール確認が必要な場合（セッションがない場合）
       if (!data.session) {
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-
-        if (signInError) {
-          setError(explainAuthError(signInError.message));
-          return;
-        }
+        setEmailSent(true);
+        return;
       }
 
+      // すでにセッションがある場合（メール確認が無効な環境）
       router.push(nextPath);
       router.refresh();
     } finally {
@@ -213,6 +282,8 @@ export default function LoginPage() {
                 onClick={() => {
                   setMode("signin");
                   setError(null);
+                  setEmailSent(false);
+                  setConfirmPassword("");
                 }}
                 className={`relative z-10 rounded-lg px-3 py-2 transition-colors ${
                   mode === "signin" ? "text-white" : "text-zinc-300"
@@ -225,6 +296,7 @@ export default function LoginPage() {
                 onClick={() => {
                   setMode("signup");
                   setError(null);
+                  setEmailSent(false);
                 }}
                 className={`relative z-10 rounded-lg px-3 py-2 transition-colors ${
                   mode === "signup" ? "text-white" : "text-zinc-300"
@@ -234,60 +306,138 @@ export default function LoginPage() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <label className="block text-sm text-zinc-200">
-                メールアドレス
-                <input
-                  required
-                  type="email"
-                  autoComplete="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value.trim())}
-                  className="mt-2 w-full rounded-lg border border-white/15 bg-black/45 px-3 py-2.5 text-sm text-white outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-500/40"
-                  placeholder="you@example.com"
-                />
-              </label>
+            {/* メール確認送信完了画面 */}
+            {emailSent ? (
+              <div className="space-y-4">
+                <div className="rounded-xl border border-green-500/40 bg-green-500/10 p-6 text-center">
+                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-500/20">
+                    <svg className="h-8 w-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <h2 className="mb-2 text-xl font-semibold text-white">確認メールを送信しました</h2>
+                  <p className="text-sm text-zinc-300">
+                    <span className="font-medium text-white">{email}</span> に確認メールを送信しました。
+                  </p>
+                  <p className="mt-2 text-sm text-zinc-400">
+                    メール内のリンクをクリックして、アカウントを有効化してください。
+                  </p>
+                </div>
+                <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+                  <p className="text-xs text-zinc-400">
+                    メールが届かない場合は、迷惑メールフォルダをご確認ください。
+                    <br />
+                    数分経ってもメールが届かない場合は、再度お試しください。
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEmailSent(false);
+                    setPassword("");
+                    setConfirmPassword("");
+                  }}
+                  className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-white/10"
+                >
+                  別のメールアドレスで登録する
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <label className="block text-sm text-zinc-200">
+                  メールアドレス
+                  <input
+                    required
+                    type="email"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value.trim())}
+                    className="mt-2 w-full rounded-lg border border-white/15 bg-black/45 px-3 py-2.5 text-sm text-white outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-500/40"
+                    placeholder="you@example.com"
+                  />
+                </label>
 
-              <label className="block text-sm text-zinc-200">
-                パスワード
-                <input
-                  required
-                  type="password"
-                  autoComplete={
-                    mode === "signin" ? "current-password" : "new-password"
-                  }
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  className="mt-2 w-full rounded-lg border border-white/15 bg-black/45 px-3 py-2.5 text-sm text-white outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-500/40"
-                  placeholder="8文字以上"
-                />
-              </label>
+                <label className="block text-sm text-zinc-200">
+                  パスワード
+                  <input
+                    required
+                    type="password"
+                    autoComplete={
+                      mode === "signin" ? "current-password" : "new-password"
+                    }
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    className="mt-2 w-full rounded-lg border border-white/15 bg-black/45 px-3 py-2.5 text-sm text-white outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-500/40"
+                    placeholder={mode === "signup" ? "大文字2個以上、数字2個以上を含む8文字以上" : "パスワードを入力"}
+                  />
+                </label>
 
-              {error ? (
-                <p className="rounded-lg border border-red-500/60 bg-red-500/10 px-3 py-2 text-sm text-red-100">
-                  {error}
-                </p>
-              ) : null}
+                {/* 新規登録時のパスワード強度インジケーター */}
+                {mode === "signup" && passwordStrength && (
+                  <div className="space-y-2 rounded-lg border border-white/10 bg-white/5 p-3">
+                    <p className="text-xs font-medium text-zinc-300">パスワード要件:</p>
+                    <ul className="space-y-1 text-xs">
+                      <li className={`flex items-center gap-2 ${passwordStrength.hasLength ? "text-green-400" : "text-zinc-500"}`}>
+                        {passwordStrength.hasLength ? "✓" : "○"} 8文字以上
+                      </li>
+                      <li className={`flex items-center gap-2 ${passwordStrength.hasUppercase ? "text-green-400" : "text-zinc-500"}`}>
+                        {passwordStrength.hasUppercase ? "✓" : "○"} 大文字2個以上（現在: {passwordStrength.uppercaseCount}個）
+                      </li>
+                      <li className={`flex items-center gap-2 ${passwordStrength.hasDigits ? "text-green-400" : "text-zinc-500"}`}>
+                        {passwordStrength.hasDigits ? "✓" : "○"} 数字2個以上（現在: {passwordStrength.digitCount}個）
+                      </li>
+                    </ul>
+                  </div>
+                )}
 
-              <button
-                disabled={pending}
-                type="submit"
-                className="mt-2 w-full rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {pending
-                  ? mode === "signin"
-                    ? "ログイン中..."
-                    : "アカウントを作成しています..."
-                  : mode === "signin"
-                    ? "ログインする"
-                    : "アカウントを作成する"}
-              </button>
-            </form>
+                {/* 新規登録時のパスワード確認 */}
+                {mode === "signup" && (
+                  <label className="block text-sm text-zinc-200">
+                    パスワード（確認）
+                    <input
+                      required
+                      type="password"
+                      autoComplete="new-password"
+                      value={confirmPassword}
+                      onChange={(event) => setConfirmPassword(event.target.value)}
+                      className="mt-2 w-full rounded-lg border border-white/15 bg-black/45 px-3 py-2.5 text-sm text-white outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-500/40"
+                      placeholder="パスワードを再入力"
+                    />
+                  </label>
+                )}
+
+                {error ? (
+                  <p className="rounded-lg border border-red-500/60 bg-red-500/10 px-3 py-2 text-sm text-red-100">
+                    {error}
+                  </p>
+                ) : null}
+
+                <button
+                  disabled={pending}
+                  type="submit"
+                  className="mt-2 w-full rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {pending
+                    ? mode === "signin"
+                      ? "ログイン中..."
+                      : "アカウントを作成しています..."
+                    : mode === "signin"
+                      ? "ログインする"
+                      : "アカウントを作成する"}
+                </button>
+              </form>
+            )}
 
             <p className="mt-6 text-xs text-zinc-400">
-              認証に成功すると {nextPath} に移動します。
-              <br />
-              Supabase RLSにより、ユーザー権限に応じたデータのみ取得されます。
+              {emailSent
+                ? "確認メールのリンクをクリック後、ログインしてください。"
+                : (
+                  <>
+                    認証に成功すると {nextPath} に移動します。
+                    <br />
+                    Supabase RLSにより、ユーザー権限に応じたデータのみ取得されます。
+                  </>
+                )}
             </p>
 
             <div className="mt-5 text-right">
