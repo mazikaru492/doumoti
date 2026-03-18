@@ -24,7 +24,9 @@ export default async function MyPage() {
 
   return (
     <section className="mx-auto max-w-3xl px-4 sm:px-6 py-16 text-foreground">
-      <h1 className="text-2xl sm:text-3xl font-semibold text-white">マイページ</h1>
+      <h1 className="text-2xl sm:text-3xl font-semibold text-white">
+        マイページ
+      </h1>
       <p className="mt-4 text-zinc-300">ログイン済みユーザー専用ページです。</p>
 
       <div className="mt-8 rounded-xl border border-white/10 bg-white/5 p-4 sm:p-6">

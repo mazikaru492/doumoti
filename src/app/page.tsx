@@ -90,7 +90,7 @@ export default async function HomePage() {
 
   // ユーザーがアクセスできる動画でヒーローを選択
   const accessibleVideos = allVideos.filter((video) =>
-    canAccessTier(userTier, video.minimum_required_tier)
+    canAccessTier(userTier, video.minimum_required_tier),
   );
   const heroVideo = accessibleVideos[0] || allVideos[0];
 
@@ -153,7 +153,11 @@ export default async function HomePage() {
         )}
 
         {/* 全作品 */}
-        <GenreSection genre="すべての作品" videos={allVideos} userTier={userTier} />
+        <GenreSection
+          genre="すべての作品"
+          videos={allVideos}
+          userTier={userTier}
+        />
       </div>
     </main>
   );

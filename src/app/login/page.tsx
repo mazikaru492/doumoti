@@ -17,7 +17,8 @@ function sanitizeInput(input: string): string {
 
 // メールアドレスの厳密なバリデーション
 function isValidEmail(email: string): boolean {
-  const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+  const emailRegex =
+    /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
   return emailRegex.test(email) && email.length <= 254;
 }
 
@@ -40,7 +41,11 @@ function validatePasswordStrength(password: string): string | null {
   return null;
 }
 
-function validateInput(email: string, password: string, mode: AuthMode): string | null {
+function validateInput(
+  email: string,
+  password: string,
+  mode: AuthMode,
+): string | null {
   const sanitizedEmail = sanitizeInput(email);
 
   if (!isValidEmail(sanitizedEmail)) {
@@ -311,13 +316,26 @@ export default function LoginPage() {
               <div className="space-y-4">
                 <div className="rounded-xl border border-green-500/40 bg-green-500/10 p-6 text-center">
                   <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-500/20">
-                    <svg className="h-8 w-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    <svg
+                      className="h-8 w-8 text-green-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                      />
                     </svg>
                   </div>
-                  <h2 className="mb-2 text-xl font-semibold text-white">確認メールを送信しました</h2>
+                  <h2 className="mb-2 text-xl font-semibold text-white">
+                    確認メールを送信しました
+                  </h2>
                   <p className="text-sm text-zinc-300">
-                    <span className="font-medium text-white">{email}</span> に確認メールを送信しました。
+                    <span className="font-medium text-white">{email}</span>{" "}
+                    に確認メールを送信しました。
                   </p>
                   <p className="mt-2 text-sm text-zinc-400">
                     メール内のリンクをクリックして、アカウントを有効化してください。
@@ -368,23 +386,38 @@ export default function LoginPage() {
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
                     className="mt-2 w-full rounded-lg border border-white/15 bg-black/45 px-3 py-2.5 text-sm text-white outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-500/40"
-                    placeholder={mode === "signup" ? "大文字2個以上、数字2個以上を含む8文字以上" : "パスワードを入力"}
+                    placeholder={
+                      mode === "signup"
+                        ? "大文字2個以上、数字2個以上を含む8文字以上"
+                        : "パスワードを入力"
+                    }
                   />
                 </label>
 
                 {/* 新規登録時のパスワード強度インジケーター */}
                 {mode === "signup" && passwordStrength && (
                   <div className="space-y-2 rounded-lg border border-white/10 bg-white/5 p-3">
-                    <p className="text-xs font-medium text-zinc-300">パスワード要件:</p>
+                    <p className="text-xs font-medium text-zinc-300">
+                      パスワード要件:
+                    </p>
                     <ul className="space-y-1 text-xs">
-                      <li className={`flex items-center gap-2 ${passwordStrength.hasLength ? "text-green-400" : "text-zinc-500"}`}>
+                      <li
+                        className={`flex items-center gap-2 ${passwordStrength.hasLength ? "text-green-400" : "text-zinc-500"}`}
+                      >
                         {passwordStrength.hasLength ? "✓" : "○"} 8文字以上
                       </li>
-                      <li className={`flex items-center gap-2 ${passwordStrength.hasUppercase ? "text-green-400" : "text-zinc-500"}`}>
-                        {passwordStrength.hasUppercase ? "✓" : "○"} 大文字2個以上（現在: {passwordStrength.uppercaseCount}個）
+                      <li
+                        className={`flex items-center gap-2 ${passwordStrength.hasUppercase ? "text-green-400" : "text-zinc-500"}`}
+                      >
+                        {passwordStrength.hasUppercase ? "✓" : "○"}{" "}
+                        大文字2個以上（現在: {passwordStrength.uppercaseCount}
+                        個）
                       </li>
-                      <li className={`flex items-center gap-2 ${passwordStrength.hasDigits ? "text-green-400" : "text-zinc-500"}`}>
-                        {passwordStrength.hasDigits ? "✓" : "○"} 数字2個以上（現在: {passwordStrength.digitCount}個）
+                      <li
+                        className={`flex items-center gap-2 ${passwordStrength.hasDigits ? "text-green-400" : "text-zinc-500"}`}
+                      >
+                        {passwordStrength.hasDigits ? "✓" : "○"}{" "}
+                        数字2個以上（現在: {passwordStrength.digitCount}個）
                       </li>
                     </ul>
                   </div>
@@ -399,7 +432,9 @@ export default function LoginPage() {
                       type="password"
                       autoComplete="new-password"
                       value={confirmPassword}
-                      onChange={(event) => setConfirmPassword(event.target.value)}
+                      onChange={(event) =>
+                        setConfirmPassword(event.target.value)
+                      }
                       className="mt-2 w-full rounded-lg border border-white/15 bg-black/45 px-3 py-2.5 text-sm text-white outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-500/40"
                       placeholder="パスワードを再入力"
                     />
@@ -429,15 +464,16 @@ export default function LoginPage() {
             )}
 
             <p className="mt-6 text-xs text-zinc-400">
-              {emailSent
-                ? "確認メールのリンクをクリック後、ログインしてください。"
-                : (
-                  <>
-                    認証に成功すると {nextPath} に移動します。
-                    <br />
-                    Supabase RLSにより、ユーザー権限に応じたデータのみ取得されます。
-                  </>
-                )}
+              {emailSent ? (
+                "確認メールのリンクをクリック後、ログインしてください。"
+              ) : (
+                <>
+                  認証に成功すると {nextPath} に移動します。
+                  <br />
+                  Supabase
+                  RLSにより、ユーザー権限に応じたデータのみ取得されます。
+                </>
+              )}
             </p>
 
             <div className="mt-5 text-right">

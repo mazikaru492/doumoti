@@ -1,5 +1,13 @@
 import { createSupabaseServerClient } from "@/utils/supabase/server";
-import { Check, Crown, Star, Zap, X, AlertCircle, PartyPopper } from "lucide-react";
+import {
+  Check,
+  Crown,
+  Star,
+  Zap,
+  X,
+  AlertCircle,
+  PartyPopper,
+} from "lucide-react";
 import Link from "next/link";
 
 type Tier = "NORMAL" | "GENERAL" | "VIP";
@@ -87,7 +95,8 @@ const plans = [
 
 const errorMessages: Record<string, string> = {
   invalid_request: "リクエストが無効です。もう一度お試しください。",
-  stripe_not_configured: "決済システムが設定されていません。管理者にお問い合わせください。",
+  stripe_not_configured:
+    "決済システムが設定されていません。管理者にお問い合わせください。",
   stripe_error: "決済処理中にエラーが発生しました。もう一度お試しください。",
   no_checkout_url: "決済ページの生成に失敗しました。もう一度お試しください。",
   checkout_failed: "決済処理に失敗しました。もう一度お試しください。",
@@ -118,7 +127,9 @@ export default async function PricingPage({ searchParams }: PageProps) {
   const showSuccess = params.success === "true";
   const showCanceled = params.canceled === "true";
   const errorCode = params.error;
-  const errorMessage = errorCode ? errorMessages[errorCode] || "エラーが発生しました。" : null;
+  const errorMessage = errorCode
+    ? errorMessages[errorCode] || "エラーが発生しました。"
+    : null;
 
   return (
     <main className="min-h-screen bg-black pt-24 pb-16">
@@ -130,7 +141,9 @@ export default async function PricingPage({ searchParams }: PageProps) {
               <PartyPopper className="w-6 h-6 text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <h2 className="text-lg font-bold text-green-400">登録が完了しました！</h2>
+              <h2 className="text-lg font-bold text-green-400">
+                登録が完了しました！
+              </h2>
               <p className="text-green-300/80 text-sm">
                 ご登録ありがとうございます。すべてのコンテンツをお楽しみください。
               </p>
@@ -151,7 +164,9 @@ export default async function PricingPage({ searchParams }: PageProps) {
               <X className="w-6 h-6 text-zinc-400" />
             </div>
             <div className="flex-1 min-w-0">
-              <h2 className="text-lg font-bold text-white">決済がキャンセルされました</h2>
+              <h2 className="text-lg font-bold text-white">
+                決済がキャンセルされました
+              </h2>
               <p className="text-zinc-400 text-sm">
                 決済はキャンセルされました。いつでも再度お申し込みいただけます。
               </p>
@@ -166,7 +181,9 @@ export default async function PricingPage({ searchParams }: PageProps) {
               <AlertCircle className="w-6 h-6 text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <h2 className="text-lg font-bold text-red-400">エラーが発生しました</h2>
+              <h2 className="text-lg font-bold text-red-400">
+                エラーが発生しました
+              </h2>
               <p className="text-red-300/80 text-sm">{errorMessage}</p>
             </div>
           </div>
@@ -326,7 +343,8 @@ export default async function PricingPage({ searchParams }: PageProps) {
                 </span>
               </summary>
               <p className="text-zinc-400 mt-3 text-sm">
-                クレジットカード（Visa、Mastercard、American Express、JCB）に対応しています。
+                クレジットカード（Visa、Mastercard、American
+                Express、JCB）に対応しています。
               </p>
             </details>
             <details className="group bg-zinc-900 rounded-lg p-4">
