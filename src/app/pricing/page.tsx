@@ -125,11 +125,11 @@ export default async function PricingPage({ searchParams }: PageProps) {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* 成功メッセージ */}
         {showSuccess && (
-          <div className="mb-8 p-4 rounded-xl bg-green-900/30 border border-green-600 flex items-center gap-4">
+          <div className="mb-8 p-4 rounded-xl bg-green-900/30 border border-green-600 flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <div className="w-12 h-12 rounded-full bg-green-600 flex items-center justify-center shrink-0">
               <PartyPopper className="w-6 h-6 text-white" />
             </div>
-            <div>
+            <div className="flex-1 min-w-0">
               <h2 className="text-lg font-bold text-green-400">登録が完了しました！</h2>
               <p className="text-green-300/80 text-sm">
                 ご登録ありがとうございます。すべてのコンテンツをお楽しみください。
@@ -137,7 +137,7 @@ export default async function PricingPage({ searchParams }: PageProps) {
             </div>
             <Link
               href="/"
-              className="ml-auto bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-lg transition-colors"
+              className="w-full sm:w-auto sm:ml-auto bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-lg transition-colors text-center"
             >
               ホームへ
             </Link>
@@ -146,11 +146,11 @@ export default async function PricingPage({ searchParams }: PageProps) {
 
         {/* キャンセルメッセージ */}
         {showCanceled && (
-          <div className="mb-8 p-4 rounded-xl bg-zinc-800 border border-zinc-700 flex items-center gap-4">
+          <div className="mb-8 p-4 rounded-xl bg-zinc-800 border border-zinc-700 flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <div className="w-12 h-12 rounded-full bg-zinc-700 flex items-center justify-center shrink-0">
               <X className="w-6 h-6 text-zinc-400" />
             </div>
-            <div>
+            <div className="flex-1 min-w-0">
               <h2 className="text-lg font-bold text-white">決済がキャンセルされました</h2>
               <p className="text-zinc-400 text-sm">
                 決済はキャンセルされました。いつでも再度お申し込みいただけます。
@@ -161,11 +161,11 @@ export default async function PricingPage({ searchParams }: PageProps) {
 
         {/* エラーメッセージ */}
         {errorMessage && (
-          <div className="mb-8 p-4 rounded-xl bg-red-900/30 border border-red-600 flex items-center gap-4">
+          <div className="mb-8 p-4 rounded-xl bg-red-900/30 border border-red-600 flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <div className="w-12 h-12 rounded-full bg-red-600 flex items-center justify-center shrink-0">
               <AlertCircle className="w-6 h-6 text-white" />
             </div>
-            <div>
+            <div className="flex-1 min-w-0">
               <h2 className="text-lg font-bold text-red-400">エラーが発生しました</h2>
               <p className="text-red-300/80 text-sm">{errorMessage}</p>
             </div>

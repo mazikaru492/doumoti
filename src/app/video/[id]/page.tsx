@@ -135,7 +135,7 @@ export default async function VideoPage({ params }: VideoPageProps) {
                   className="flex gap-3 group hover:bg-surface-light/50 rounded-lg p-2 transition-colors"
                 >
                   {/* サムネイル */}
-                  <div className="relative w-36 sm:w-40 shrink-0 aspect-video rounded-lg overflow-hidden">
+                  <div className="relative w-28 sm:w-36 lg:w-40 shrink-0 aspect-video rounded-lg overflow-hidden">
                     <Image
                       src={related.thumbnailUrl}
                       alt={related.title}

@@ -11,7 +11,7 @@ export default function HeroSection({ video }: HeroSectionProps) {
   const thumbnailSrc = video.thumbnail_url?.trim() || null;
 
   return (
-    <section className="relative w-full h-[85vh] min-h-[600px] overflow-hidden">
+    <section className="relative w-full h-[70vh] sm:h-[85vh] min-h-[400px] sm:min-h-[600px] overflow-hidden">
       {/* 背景画像 / フォールバック */}
       {thumbnailSrc ? (
         <Image
@@ -37,7 +37,7 @@ export default function HeroSection({ video }: HeroSectionProps) {
       <div className="absolute inset-0 netflix-gradient-bottom" />
 
       {/* コンテンツ */}
-      <div className="absolute inset-0 flex items-end pb-[20%] sm:items-center sm:pb-0">
+      <div className="absolute inset-0 flex items-end pb-16 sm:items-center sm:pb-0">
         <div className="w-full px-4 sm:px-12 lg:px-16">
           <div className="max-w-2xl fade-in">
             {/* Netflixロゴ風のシリーズマーク */}
