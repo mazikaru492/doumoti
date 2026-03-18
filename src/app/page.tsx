@@ -4,12 +4,6 @@ import { createSupabaseServerClient } from "@/utils/supabase/server";
 import { type Video } from "@/lib/video-model";
 import { type VideoCatalogRow } from "@/types/database";
 
-/**
- * ホームページ
- *
- * - 最も評価の高い動画をヒーローバナーに表示
- * - ジャンル別にカルーセルセクションを動的生成
- */
 export default async function HomePage() {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
@@ -21,13 +15,15 @@ export default async function HomePage() {
 
   if (error) {
     return (
-      <section className="mx-auto max-w-5xl px-6 py-20 text-foreground">
-        <h1 className="text-2xl font-semibold text-white">
-          動画を読み込めませんでした
-        </h1>
-        <p className="mt-3 text-sm text-zinc-300">
-          データベースへの接続で問題が発生しました。時間をおいて再試行してください。
-        </p>
+      <section className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-white mb-2">
+            動画を読み込めませんでした
+          </h1>
+          <p className="text-zinc-400">
+            データベースへの接続で問題が発生しました。時間をおいて再試行してください。
+          </p>
+        </div>
       </section>
     );
   }
@@ -44,46 +40,69 @@ export default async function HomePage() {
 
   if (allVideos.length === 0) {
     return (
-      <section className="mx-auto max-w-5xl px-6 py-20 text-foreground">
-        <h1 className="text-2xl font-semibold text-white">
-          現在動画を準備中です
-        </h1>
-        <p className="mt-3 text-sm text-zinc-300">
-          新しい作品を順次追加しています。しばらくしてからもう一度ご確認ください。
-        </p>
+      <section className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-white mb-2">
+            現在動画を準備中です
+          </h1>
+          <p className="text-zinc-400">
+            新しい作品を順次追加しています。しばらくしてからもう一度ご確認ください。
+          </p>
+        </div>
       </section>
     );
   }
 
   const [heroVideo, ...remainingVideos] = allVideos;
-  const normalVideos = remainingVideos.filter(
+
+  const recentlyAdded = remainingVideos.slice(0, 10);
+
+  const normalVideos = allVideos.filter(
     (video) => video.minimum_required_tier === "NORMAL",
   );
-  const generalVideos = remainingVideos.filter(
+  const generalVideos = allVideos.filter(
     (video) => video.minimum_required_tier === "GENERAL",
   );
-  const vipVideos = remainingVideos.filter(
+  const vipVideos = allVideos.filter(
     (video) => video.minimum_required_tier === "VIP",
   );
 
   return (
-    <>
+    <main className="min-h-screen bg-black">
       {/* ヒーローバナー */}
       <HeroSection video={heroVideo} />
 
-      {/* Tier別セクション */}
-      <div className="space-y-4 mt-4">
-        <GenreSection id="normal" genre="Normal プラン" videos={normalVideos} />
-        <GenreSection
-          id="general"
-          genre="General プラン"
-          videos={generalVideos}
-        />
-        <GenreSection id="vip" genre="VIP プラン" videos={vipVideos} />
+      {/* カルーセルセクション - ヒーローセクションに重なる */}
+      <div className="relative z-10 -mt-32 sm:-mt-40 pb-20 space-y-2">
+        {/* 最近追加された作品 */}
+        <GenreSection genre="最近追加された作品" videos={recentlyAdded} />
 
-        {/* 全作品セクション */}
-        <GenreSection genre="すべての作品" videos={remainingVideos} />
+        {/* 無料で視聴可能 */}
+        {normalVideos.length > 0 && (
+          <GenreSection
+            id="normal"
+            genre="無料で視聴可能"
+            videos={normalVideos}
+          />
+        )}
+
+        {/* General限定 */}
+        {generalVideos.length > 0 && (
+          <GenreSection
+            id="general"
+            genre="Generalプラン限定"
+            videos={generalVideos}
+          />
+        )}
+
+        {/* VIP限定 */}
+        {vipVideos.length > 0 && (
+          <GenreSection id="vip" genre="VIPプラン限定" videos={vipVideos} />
+        )}
+
+        {/* 全作品 */}
+        <GenreSection genre="すべての作品" videos={allVideos} />
       </div>
-    </>
+    </main>
   );
 }

@@ -21,16 +21,14 @@ type PlaybackClaims = {
   previewWindowEndSec?: number;
 };
 
-type AdSession = {
-  adSessionId: string;
-  userId: string;
-  videoId: string;
-  createdAt: number;
-  expiresAt: number;
+type AdSessionRow = {
+  id: string;
+  user_id: string;
+  video_id: string;
+  created_at: string;
+  expires_at: string;
   consumed: boolean;
 };
-
-const adSessionStore = new Map<string, AdSession>();
 
 async function streamCatalog(
   videoId: string,
@@ -125,15 +123,24 @@ export async function buildEntitlement(params: {
   const defaultQuality = defaultPlaybackQuality(plan);
 
   if (adRequired) {
+    const admin = createSupabaseAdminClient();
     const adSessionId = cryptoRandomId();
-    adSessionStore.set(adSessionId, {
-      adSessionId,
-      userId: params.userId,
-      videoId: params.videoId,
-      createdAt: Date.now(),
-      expiresAt: Date.now() + 5 * 60 * 1000,
-      consumed: false,
-    });
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + 5 * 60 * 1000);
+
+    await admin.from("ad_sessions").upsert(
+      {
+        id: adSessionId,
+        user_id: params.userId,
+        video_id: params.videoId,
+        created_at: now.toISOString(),
+        expires_at: expiresAt.toISOString(),
+        consumed: false,
+      },
+      {
+        onConflict: "user_id,video_id",
+      },
+    );
 
     return {
       plan,
@@ -192,33 +199,47 @@ export async function grantAdSessionPlayback(params: {
   videoId: string;
   minimumWatchMs?: number;
 }): Promise<{ url: string; expiresAt: number } | null> {
-  const adSession = adSessionStore.get(params.adSessionId);
-  if (!adSession) {
+  const admin = createSupabaseAdminClient();
+  const now = new Date();
+
+  const { data: adSession, error } = await admin
+    .from("ad_sessions")
+    .select("id,user_id,video_id,created_at,expires_at,consumed")
+    .eq("id", params.adSessionId)
+    .maybeSingle<AdSessionRow>();
+
+  if (error || !adSession) {
     return null;
   }
   if (adSession.consumed) {
     return null;
   }
   if (
-    adSession.userId !== params.userId ||
-    adSession.videoId !== params.videoId
+    adSession.user_id !== params.userId ||
+    adSession.video_id !== params.videoId
   ) {
     return null;
   }
-  if (Date.now() > adSession.expiresAt) {
+
+  const expiresAt = new Date(adSession.expires_at);
+  if (now > expiresAt) {
     return null;
   }
 
+  const createdAt = new Date(adSession.created_at);
   const minimumWatchMs = params.minimumWatchMs ?? 8000;
-  const elapsed = Date.now() - adSession.createdAt;
+  const elapsed = now.getTime() - createdAt.getTime();
   if (elapsed < minimumWatchMs) {
     return null;
   }
 
-  adSessionStore.set(params.adSessionId, {
-    ...adSession,
-    consumed: true,
-  });
+  await admin
+    .from("ad_sessions")
+    .update({
+      consumed: true,
+      consumed_at: now.toISOString(),
+    })
+    .eq("id", params.adSessionId);
 
   return buildSignedSource(params.userId, params.videoId, "general", "sd");
 }

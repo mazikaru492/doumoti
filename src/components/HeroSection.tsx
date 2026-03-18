@@ -1,24 +1,17 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Play, Info, Clock } from "lucide-react";
-import { type Video, formatDuration, formatTierLabel } from "@/lib/video-model";
+import { Play, Info } from "lucide-react";
+import { type Video } from "@/lib/video-model";
 
 interface HeroSectionProps {
-  /** ヒーローに表示する注目動画 */
   video: Video;
 }
 
-/**
- * HeroSection — トップページのヒーローバナー
- *
- * 注目動画の大型表示。サムネイルを背景にしたグラデーションオーバーレイ。
- * 「今すぐ再生」と「詳細を見る」のCTAボタン。
- */
 export default function HeroSection({ video }: HeroSectionProps) {
   const thumbnailSrc = video.thumbnail_url?.trim() || null;
 
   return (
-    <section className="relative w-full h-[70vh] min-h-[500px] max-h-[800px] overflow-hidden">
+    <section className="relative w-full h-[85vh] min-h-[600px] overflow-hidden">
       {/* 背景画像 / フォールバック */}
       {thumbnailSrc ? (
         <Image
@@ -27,56 +20,61 @@ export default function HeroSection({ video }: HeroSectionProps) {
           fill
           priority
           sizes="100vw"
-          className="object-cover"
+          className="object-cover object-top"
         />
       ) : (
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,#334155,transparent_45%),radial-gradient(circle_at_80%_30%,#0f766e,transparent_40%),linear-gradient(135deg,#020617,#111827,#1e293b)]" />
+        <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 via-zinc-800 to-black">
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-4xl font-bold text-white/20 tracking-wider">
+              {video.title}
+            </span>
+          </div>
+        </div>
       )}
 
-      {/* グラデーションオーバーレイ */}
-      <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/60 to-transparent" />
-      <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
+      {/* Netflix風グラデーションオーバーレイ */}
+      <div className="absolute inset-0 netflix-gradient-left" />
+      <div className="absolute inset-0 netflix-gradient-bottom" />
 
       {/* コンテンツ */}
-      <div className="absolute inset-0 flex items-end pb-20 sm:items-center sm:pb-0">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-          <div className="max-w-xl fade-in">
-            {/* ジャンルバッジ */}
-            <div className="flex items-center gap-2 mb-4">
-              <span className="bg-primary/20 text-primary-light text-xs font-semibold px-3 py-1 rounded-full border border-primary/30">
-                {formatTierLabel(video.minimum_required_tier)}
+      <div className="absolute inset-0 flex items-end pb-[20%] sm:items-center sm:pb-0">
+        <div className="w-full px-4 sm:px-12 lg:px-16">
+          <div className="max-w-2xl fade-in">
+            {/* Netflixロゴ風のシリーズマーク */}
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-primary font-bold text-sm tracking-widest">
+                D
               </span>
-              <span className="inline-flex items-center gap-1 text-muted text-sm">
-                <Clock className="w-4 h-4" />
-                {formatDuration(video.duration_seconds)}
+              <span className="text-white/60 text-sm font-medium tracking-wide uppercase">
+                シリーズ
               </span>
             </div>
 
             {/* タイトル */}
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-4 leading-tight">
+            <h1 className="text-4xl sm:text-5xl lg:text-7xl font-black text-white mb-4 leading-none tracking-tight drop-shadow-2xl">
               {video.title}
             </h1>
 
             {/* 説明文 */}
-            <p className="text-white/70 text-sm sm:text-base leading-relaxed mb-6 line-clamp-3">
+            <p className="text-white/80 text-base sm:text-lg leading-relaxed mb-8 line-clamp-3 max-w-xl drop-shadow-lg">
               {video.description}
             </p>
 
-            {/* CTA ボタン */}
-            <div className="flex flex-wrap gap-3">
+            {/* CTA ボタン - Netflix風 */}
+            <div className="flex flex-wrap items-center gap-3">
               <Link
                 href={`/video/${video.id}`}
-                className="inline-flex items-center gap-2 bg-primary hover:bg-primary-dark text-white font-semibold px-6 py-3 rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-primary/30 hover:scale-105"
+                className="inline-flex items-center gap-2 bg-white hover:bg-white/90 text-black font-bold px-6 sm:px-8 py-2.5 sm:py-3 rounded-md transition-all duration-200 text-base sm:text-lg"
               >
-                <Play className="w-5 h-5" />
-                今すぐ再生
+                <Play className="w-6 h-6 sm:w-7 sm:h-7 fill-black" />
+                再生
               </Link>
               <Link
                 href={`/video/${video.id}`}
-                className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white font-semibold px-6 py-3 rounded-xl transition-all duration-200 backdrop-blur-sm border border-white/10"
+                className="inline-flex items-center gap-2 bg-gray-500/70 hover:bg-gray-500/50 text-white font-bold px-6 sm:px-8 py-2.5 sm:py-3 rounded-md transition-all duration-200 text-base sm:text-lg"
               >
-                <Info className="w-5 h-5" />
-                詳細を見る
+                <Info className="w-6 h-6 sm:w-7 sm:h-7" />
+                詳細情報
               </Link>
             </div>
           </div>

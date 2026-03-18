@@ -1,23 +1,23 @@
 @import "tailwindcss";
 
 /* ============================================================
-   Design System - Doumoti (ダークテーマ動画ストリーミングUI)
+   Design System - Doumoti (Netflix風ダークテーマ)
    ============================================================ */
 
 :root {
-  --background: #0b0b0f;
-  --foreground: #e8e8ed;
-  --surface: #14141a;
-  --surface-light: #1c1c24;
-  --border: #2a2a35;
-  --primary: #6d5dfc;
-  --primary-light: #8b7fff;
-  --primary-dark: #5243cc;
-  --accent: #ff6b81;
-  --accent-glow: rgba(255, 107, 129, 0.3);
-  --muted: #6b6b80;
-  --success: #2ed573;
-  --warning: #ffa502;
+  --background: #000000;
+  --foreground: #ffffff;
+  --surface: #141414;
+  --surface-light: #1a1a1a;
+  --border: #333333;
+  --primary: #e50914;
+  --primary-light: #f40612;
+  --primary-dark: #b20710;
+  --accent: #e50914;
+  --accent-glow: rgba(229, 9, 20, 0.4);
+  --muted: #808080;
+  --success: #46d369;
+  --warning: #f5c518;
 }
 
 @theme inline {
@@ -42,7 +42,11 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  font-family:
+    var(--font-sans),
+    system-ui,
+    -apple-system,
+    sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -72,29 +76,29 @@ body {
 
 /* プレミアムなグラスモーフィズム効果 */
 .glass {
-  background: rgba(20, 20, 26, 0.75);
+  background: rgba(20, 20, 20, 0.8);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 /* グラデーションテキスト */
 .gradient-text {
-  background: linear-gradient(135deg, var(--primary-light), var(--accent));
+  background: linear-gradient(135deg, #ffffff, #808080);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-/* カードホバー時のグロー効果 */
+/* カードホバー時のスケール効果（Netflix風） */
 .card-glow {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .card-glow:hover {
-  box-shadow: 0 8px 32px rgba(109, 93, 252, 0.15),
-    0 0 0 1px rgba(109, 93, 252, 0.1);
-  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.8);
+  transform: scale(1.05);
+  z-index: 10;
 }
 
 /* スケルトンローディングアニメーション */
@@ -131,7 +135,7 @@ body {
 }
 
 .fade-in {
-  animation: fadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation: fadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 /* パルスアニメーション（再生ボタン用） */
@@ -163,4 +167,26 @@ body {
 
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+
+/* Netflix風グラデーション */
+.netflix-gradient-bottom {
+  background: linear-gradient(
+    to top,
+    #000000 0%,
+    rgba(0, 0, 0, 0.9) 15%,
+    rgba(0, 0, 0, 0.7) 30%,
+    rgba(0, 0, 0, 0.4) 50%,
+    transparent 100%
+  );
+}
+
+.netflix-gradient-left {
+  background: linear-gradient(
+    to right,
+    #000000 0%,
+    rgba(0, 0, 0, 0.85) 20%,
+    rgba(0, 0, 0, 0.5) 40%,
+    transparent 100%
+  );
 }
