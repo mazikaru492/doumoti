@@ -729,9 +729,184 @@ def send_notification_email(video_title: str) -> None:
         logger.warning("Failed to send notification email (%s). Continuing.", exc)
 
 
-async def run() -> None:
+async def process_batch(
+    tasks: list[TaskItem],
+    supabase: Client,
+    aria2: aria2p.API,
+    download_dir: str,
+    cleanup_enabled: bool,
+    poll_seconds: float,
+    min_video_size_bytes: int,
+    max_per_batch: int,
+) -> tuple[int, int, int]:
+    """タスクのバッチを処理し、(imported, skipped, failed)を返す"""
+    imported = 0
+    skipped = 0
+    failed = 0
+    processed = 0
+
+    for idx, task in enumerate(tasks, start=1):
+        if processed >= max_per_batch:
+            logger.info("Batch limit reached (%d/%d). Stopping for this cycle.", processed, max_per_batch)
+            break
+
+        logger.info("Task %d/%d start", idx, len(tasks))
+        local_file_path: Optional[str] = None
+        sanitized_file_path: Optional[str] = None
+
+        try:
+            meta = infer_meta(task)
+
+            exists, reason = already_registered(
+                supabase=supabase,
+                info_hash=meta.info_hash,
+                candidate_name=meta.name,
+            )
+            if exists:
+                skipped += 1
+                logger.info("Skip: already registered (%s)", reason)
+                continue
+
+            download = add_to_aria2(aria2, task, download_dir)
+            logger.info("Queued gid=%s", download.gid)
+
+            completed = await wait_until_complete(
+                api=aria2,
+                gid=download.gid,
+                poll_seconds=poll_seconds,
+                min_video_size_bytes=min_video_size_bytes,
+            )
+
+            local_file_path = pick_primary_file(completed)
+            ensure_safe_video_file(local_file_path, min_video_size_bytes)
+
+            sanitized_file_path = sanitize_video_with_ffmpeg(local_file_path)
+
+            source_url, object_path = upload_to_storage_and_get_public_url(
+                supabase,
+                local_file_path=sanitized_file_path,
+                info_hash=meta.info_hash,
+            )
+            logger.info("Uploaded to storage path=%s", object_path)
+
+            generated_metadata = generate_video_metadata(Path(local_file_path).name)
+
+            upsert_video(
+                supabase=supabase,
+                task=task,
+                info_hash=meta.info_hash,
+                source_url=source_url,
+                generated_metadata=generated_metadata,
+            )
+
+            notification_title = task.title or generated_metadata.title or "Untitled"
+            send_notification_email(notification_title)
+
+            imported += 1
+            processed += 1
+            logger.info(
+                "Imported gid=%s title=%s",
+                completed.gid,
+                task.title or generated_metadata.title,
+            )
+
+            cleanup_local_files(local_file_path, sanitized_file_path)
+        except SkipTask as exc:
+            skipped += 1
+            logger.warning("Skip task for security policy: %s", exc)
+            cleanup_local_files(local_file_path, sanitized_file_path)
+        except Exception as exc:  # noqa: BLE001
+            failed += 1
+            logger.exception("Task failed: %s", exc)
+            if cleanup_enabled:
+                cleanup_local_files(local_file_path, sanitized_file_path)
+
+    return imported, skipped, failed
+
+
+async def run_once() -> tuple[int, int, int]:
+    """1回のバッチ処理を実行"""
     load_env()
 
+    tasks_path = os.getenv("TORRENT_TASKS_JSON", "scripts/torrent_tasks.json")
+    download_dir = os.getenv("TORRENT_DOWNLOAD_DIR", "downloads")
+    cleanup_enabled = optional_bool_env("TORRENT_DELETE_LOCAL_AFTER_UPLOAD", True)
+    poll_seconds = float(os.getenv("TORRENT_POLL_SECONDS", "5"))
+    min_video_size_bytes = int(
+        os.getenv("TORRENT_MIN_VIDEO_SIZE_BYTES", str(DEFAULT_MIN_VIDEO_SIZE_BYTES))
+    )
+    max_per_batch = int(os.getenv("TORRENT_MAX_PER_BATCH", "4"))
+
+    tasks = parse_tasks_file(tasks_path)
+    supabase = create_supabase_admin_client()
+    aria2 = create_aria2_client()
+
+    logger.info("Loaded %d task(s), max %d per batch", len(tasks), max_per_batch)
+    logger.info(
+        "Security filter: extensions=%s, min_video_size=%d bytes",
+        ",".join(sorted(ALLOWED_VIDEO_EXTENSIONS)),
+        min_video_size_bytes,
+    )
+
+    return await process_batch(
+        tasks=tasks,
+        supabase=supabase,
+        aria2=aria2,
+        download_dir=download_dir,
+        cleanup_enabled=cleanup_enabled,
+        poll_seconds=poll_seconds,
+        min_video_size_bytes=min_video_size_bytes,
+        max_per_batch=max_per_batch,
+    )
+
+
+async def run_scheduler() -> None:
+    """スケジューラーモード: 1時間ごとに自動実行"""
+    load_env()
+
+    interval_seconds = int(os.getenv("TORRENT_SCHEDULE_INTERVAL_SECONDS", "3600"))
+    logger.info("=== Torrent Bot Scheduler Started ===")
+    logger.info("Interval: %d seconds (%d minutes)", interval_seconds, interval_seconds // 60)
+
+    total_imported = 0
+    total_skipped = 0
+    total_failed = 0
+    cycle = 0
+
+    while True:
+        cycle += 1
+        logger.info("=== Cycle %d started ===", cycle)
+
+        try:
+            imported, skipped, failed = await run_once()
+            total_imported += imported
+            total_skipped += skipped
+            total_failed += failed
+
+            logger.info(
+                "Cycle %d done: imported=%d skipped=%d failed=%d | Total: imported=%d skipped=%d failed=%d",
+                cycle, imported, skipped, failed,
+                total_imported, total_skipped, total_failed,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.exception("Cycle %d failed: %s", cycle, exc)
+
+        logger.info("Sleeping for %d seconds until next cycle...", interval_seconds)
+        await asyncio.sleep(interval_seconds)
+
+
+async def run() -> None:
+    """メイン実行: --schedulerフラグで常駐モード"""
+    load_env()
+
+    # スケジューラーモードかどうか
+    scheduler_mode = "--scheduler" in sys.argv or optional_bool_env("TORRENT_SCHEDULER_MODE", False)
+
+    if scheduler_mode:
+        await run_scheduler()
+        return
+
+    # 単発実行モード（従来の動作）
     tasks_path = os.getenv("TORRENT_TASKS_JSON", "scripts/torrent_tasks.json")
     download_dir = os.getenv("TORRENT_DOWNLOAD_DIR", "downloads")
     cleanup_enabled = optional_bool_env("TORRENT_DELETE_LOCAL_AFTER_UPLOAD", True)
