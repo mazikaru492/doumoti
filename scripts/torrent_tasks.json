@@ -1,18 +1,42 @@
 [
   {
     "magnet": "magnet:?xt=urn:btih:08ada5a7a6183aae1e09d831df6748d566095a10&dn=Sintel&tr=udp%3A%2F%2Ftracker.opentrackr.org%3A1337%2Fannounce&tr=udp%3A%2F%2Fopen.stealth.si%3A80%2Fannounce",
-    "title": "Sintel Test Video",
-    "description": "Torrent pipeline functional test task",
-    "thumbnail_url": "https://picsum.photos/seed/torrent-task/640/360",
+    "title": "シンテル - ドラゴンと少女の物語",
+    "description": "Blender財団制作のオープンソース映画。少女シンテルとドラゴンの感動的な冒険ストーリー。美しいCGアニメーションで描かれた15分の短編映画。",
+    "thumbnail_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f4/Sintel_poster.jpg/220px-Sintel_poster.jpg",
     "minimum_required_tier": "NORMAL",
-    "duration_seconds": 120
+    "duration_seconds": 888
   },
   {
     "torrent_file": "scripts/torrents/big-buck-bunny.torrent",
-    "title": "Big Buck Bunny Test Video",
-    "description": "Second reproducibility test task",
-    "thumbnail_url": "https://picsum.photos/seed/torrent-task-bbb/640/360",
+    "title": "ビッグ・バック・バニー - 巨大ウサギの冒険",
+    "description": "Blender財団制作のオープンソースアニメーション。巨大なウサギが森の小動物たちにイタズラされながらも、ユーモラスに立ち向かうコミカルな物語。",
+    "thumbnail_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Big_buck_bunny_poster_big.jpg/220px-Big_buck_bunny_poster_big.jpg",
     "minimum_required_tier": "NORMAL",
-    "duration_seconds": 120
+    "duration_seconds": 596
+  },
+  {
+    "magnet": "magnet:?xt=urn:btih:209c8226b299b308beaf2b9cd3fb49212dbd13ec&dn=Tears%20of%20Steel&tr=udp%3A%2F%2Ftracker.opentrackr.org%3A1337%2Fannounce",
+    "title": "ティアーズ・オブ・スティール - 鋼鉄の涙",
+    "description": "Blender財団制作のSF実写短編映画。実写映像とCGを融合させた革新的な作品。ロボットとの戦いを描いたポストアポカリプス物語。",
+    "thumbnail_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Tears_of_Steel_poster.jpg/220px-Tears_of_Steel_poster.jpg",
+    "minimum_required_tier": "NORMAL",
+    "duration_seconds": 734
+  },
+  {
+    "magnet": "magnet:?xt=urn:btih:d334a8ee5e5af690f32f24455c0e202ef9b5b317&dn=Elephants%20Dream&tr=udp%3A%2F%2Ftracker.opentrackr.org%3A1337%2Fannounce",
+    "title": "エレファンツ・ドリーム - 象の夢",
+    "description": "Blender財団初のオープンソース映画プロジェクト（2006年）。シュールな機械世界を舞台に、二人のキャラクターが冒険する実験的アニメーション。",
+    "thumbnail_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e8/Elephants_Dream_cover.jpg/220px-Elephants_Dream_cover.jpg",
+    "minimum_required_tier": "NORMAL",
+    "duration_seconds": 654
+  },
+  {
+    "magnet": "magnet:?xt=urn:btih:70c236d7b9e43c6c6f2fdf7dbddfa16e9c8c1a3c&dn=Cosmos%20Laundromat&tr=udp%3A%2F%2Ftracker.opentrackr.org%3A1337%2Fannounce",
+    "title": "コスモス・ランドロマット - 宇宙のコインランドリー",
+    "description": "Blender財団制作のパイロット版アニメーション。孤独な羊フランクが不思議な洗濯機を通じて様々な人生を体験する哲学的な物語。",
+    "thumbnail_url": "https://upload.wikimedia.org/wikipedia/en/3/3a/Cosmos_Laundromat_-_First_Cycle_%28Pilot%29_poster.jpg",
+    "minimum_required_tier": "GENERAL",
+    "duration_seconds": 726
   }
 ]

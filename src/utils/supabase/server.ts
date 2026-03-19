@@ -33,3 +33,6 @@ export async function createSupabaseServerClient(): Promise<SupabaseClient> {
     },
   });
 }
+
+// Alias for Supabase template compatibility
+export const createClient = createSupabaseServerClient;

@@ -517,9 +517,9 @@ def upload_to_storage_and_get_public_url(
 def fallback_generated_metadata(filename: str) -> GeneratedMetadata:
     stem = Path(filename).stem
     normalized = re.sub(r"[_\-.]+", " ", stem).strip()
-    title = normalized.title() if normalized else "Untitled Torrent Video"
+    title = normalized.title() if normalized else "無題の動画"
     description = (
-        f"{title} was automatically ingested from the BitTorrent pipeline and prepared for streaming delivery."
+        f"「{title}」は自動取り込みパイプラインによりダウンロードされ、ストリーミング配信用に準備されました。"
     )
     return GeneratedMetadata(title=title, description=description)
 
@@ -627,13 +627,13 @@ def upsert_video(
     source_url: str,
     generated_metadata: GeneratedMetadata,
 ) -> None:
-    title = (task.title or generated_metadata.title or "Untitled Torrent Video").strip()
+    title = (task.title or generated_metadata.title or "無題の動画").strip()
     if not title:
-        title = "Untitled Torrent Video"
+        title = "無題の動画"
 
     description = (
         (task.description or generated_metadata.description).strip()
-        or "Imported from research BitTorrent pipeline"
+        or "自動取り込みパイプラインからインポートされました"
     )
 
     thumbnail = (task.thumbnail_url or "https://picsum.photos/seed/torrent-bot/640/360").strip()

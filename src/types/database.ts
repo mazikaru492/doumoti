@@ -23,11 +23,38 @@ export type VideoCatalogRow = Pick<
   | "created_at"
 >;
 
+export interface ProfileRow {
+  id: string;
+  subscription_tier: SubscriptionTier;
+  stripe_customer_id: string | null;
+  created_at: string;
+}
+
+export interface StripeEventRow {
+  id: number;
+  event_id: string;
+  processed_at: string;
+}
+
+export interface NoteRow {
+  id: number;
+  title: string;
+}
+
 export interface Database {
   public: {
     Tables: {
       videos: {
         Row: VideoRow;
+      };
+      profiles: {
+        Row: ProfileRow;
+      };
+      stripe_events: {
+        Row: StripeEventRow;
+      };
+      notes: {
+        Row: NoteRow;
       };
     };
   };
