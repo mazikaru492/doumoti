@@ -56,7 +56,9 @@ export default function VideoCard({ video, isLocked = false }: VideoCardProps) {
           </div>
 
           {/* ティアバッジ */}
-          <div className={`absolute top-2 left-2 text-white text-xs font-bold px-2 py-0.5 rounded ${tierColor[tier]}`}>
+          <div
+            className={`absolute top-2 left-2 text-white text-xs font-bold px-2 py-0.5 rounded ${tierColor[tier]}`}
+          >
             {tier === "VIP" && <Crown className="w-3 h-3 inline mr-1" />}
             {tierLabel[tier]}
           </div>
@@ -113,7 +115,9 @@ export default function VideoCard({ video, isLocked = false }: VideoCardProps) {
 
         {/* ティアバッジ (NORMAL以外) */}
         {tier !== "NORMAL" && (
-          <div className={`absolute top-2 left-2 text-white text-xs font-bold px-2 py-0.5 rounded ${tierColor[tier]}`}>
+          <div
+            className={`absolute top-2 left-2 text-white text-xs font-bold px-2 py-0.5 rounded ${tierColor[tier]}`}
+          >
             {tier === "VIP" && <Crown className="w-3 h-3 inline mr-1" />}
             {tierLabel[tier]}
           </div>

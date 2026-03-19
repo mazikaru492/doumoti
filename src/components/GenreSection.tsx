@@ -16,7 +16,10 @@ interface GenreSectionProps {
   requiresUpgrade?: boolean;
 }
 
-function canAccessTier(userTier: Tier | null | undefined, requiredTier: Tier): boolean {
+function canAccessTier(
+  userTier: Tier | null | undefined,
+  requiredTier: Tier,
+): boolean {
   if (!userTier) return requiredTier === "NORMAL";
 
   const tierOrder: Record<Tier, number> = {
@@ -33,7 +36,7 @@ export default function GenreSection({
   videos,
   id,
   userTier,
-  requiresUpgrade = false
+  requiresUpgrade = false,
 }: GenreSectionProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
@@ -111,7 +114,10 @@ export default function GenreSection({
           className="flex gap-2 overflow-x-auto scrollbar-hide px-4 sm:px-8 lg:px-16 pb-4"
         >
           {videos.map((video) => {
-            const isLocked = !canAccessTier(userTier, video.minimum_required_tier);
+            const isLocked = !canAccessTier(
+              userTier,
+              video.minimum_required_tier,
+            );
             return (
               <div
                 key={video.id}
