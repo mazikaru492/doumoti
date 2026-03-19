@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/utils/supabase/client";
@@ -151,8 +151,11 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [pending, setPending] = useState(false);
+  const [resending, setResending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [emailSent, setEmailSent] = useState(false);
+  const [sentEmail, setSentEmail] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(0);
   const tabIndex = mode === "signin" ? 0 : 1;
 
   // パスワード強度インジケーター
@@ -171,6 +174,42 @@ export default function LoginPage() {
       digitCount,
     };
   }, [password, mode]);
+
+  // メール再送のクールダウンタイマー
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
+
+  // メール再送処理
+  async function handleResendEmail() {
+    if (resending || resendCooldown > 0 || !sentEmail) return;
+
+    setResending(true);
+    setError(null);
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      const { error: resendError } = await supabase.auth.resend({
+        type: "signup",
+        email: sentEmail,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`,
+        },
+      });
+
+      if (resendError) {
+        setError(explainAuthError(resendError.message));
+        return;
+      }
+
+      // 再送成功、60秒のクールダウンを設定
+      setResendCooldown(60);
+    } finally {
+      setResending(false);
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -236,6 +275,7 @@ export default function LoginPage() {
 
       // メール確認が必要な場合（セッションがない場合）
       if (!data.session) {
+        setSentEmail(sanitizedEmail);
         setEmailSent(true);
         return;
       }
@@ -334,26 +374,49 @@ export default function LoginPage() {
                     確認メールを送信しました
                   </h2>
                   <p className="text-sm text-zinc-300">
-                    <span className="font-medium text-white">{email}</span>{" "}
+                    <span className="font-medium text-white">{sentEmail}</span>{" "}
                     に確認メールを送信しました。
                   </p>
                   <p className="mt-2 text-sm text-zinc-400">
                     メール内のリンクをクリックして、アカウントを有効化してください。
                   </p>
                 </div>
+
+                {error && (
+                  <p className="rounded-lg border border-red-500/60 bg-red-500/10 px-3 py-2 text-sm text-red-100">
+                    {error}
+                  </p>
+                )}
+
                 <div className="rounded-lg border border-white/10 bg-white/5 p-4">
                   <p className="text-xs text-zinc-400">
                     メールが届かない場合は、迷惑メールフォルダをご確認ください。
-                    <br />
-                    数分経ってもメールが届かない場合は、再度お試しください。
                   </p>
                 </div>
+
+                {/* メール再送ボタン */}
+                <button
+                  type="button"
+                  onClick={handleResendEmail}
+                  disabled={resending || resendCooldown > 0}
+                  className="w-full rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {resending
+                    ? "送信中..."
+                    : resendCooldown > 0
+                      ? `再送可能まで ${resendCooldown}秒`
+                      : "確認メールを再送する"}
+                </button>
+
                 <button
                   type="button"
                   onClick={() => {
                     setEmailSent(false);
+                    setSentEmail("");
                     setPassword("");
                     setConfirmPassword("");
+                    setError(null);
+                    setResendCooldown(0);
                   }}
                   className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-white/10"
                 >
