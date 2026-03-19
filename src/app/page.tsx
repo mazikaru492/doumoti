@@ -112,7 +112,7 @@ export default async function HomePage() {
       <HeroSection video={heroVideo} />
 
       {/* カルーセルセクション */}
-      <div className="relative z-10 -mt-20 sm:-mt-32 lg:-mt-40 pb-20 space-y-2">
+      <div className="relative z-10 -mt-16 sm:-mt-32 lg:-mt-40 pb-20 space-y-2">
         {/* 最近追加された作品 */}
         <GenreSection
           genre="最近追加された作品"

@@ -36,10 +36,10 @@ export default function Footer() {
 
   return (
     <footer className="bg-surface border-t border-border/30 mt-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
           {/* ブランド */}
-          <div className="col-span-2 md:col-span-1">
+          <div className="col-span-1 sm:col-span-2 lg:col-span-1">
             <Link href="/" className="flex items-center gap-2 mb-4">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center">
                 <span className="text-white font-bold text-sm">D</span>
@@ -76,7 +76,7 @@ export default function Footer() {
         </div>
 
         {/* 著作権表示 */}
-        <div className="border-t border-border/30 mt-8 pt-6 text-center">
+        <div className="border-t border-border/30 mt-6 sm:mt-8 pt-4 sm:pt-6 text-center">
           <p className="text-muted text-xs">
             &copy; {currentYear} Doumoti. All rights reserved.
           </p>

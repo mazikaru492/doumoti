@@ -79,7 +79,7 @@ export default function Header({ authState }: HeaderProps) {
             : "bg-gradient-to-b from-black/80 to-transparent"
         }`}
       >
-        <div className="mx-auto h-16 w-full px-4 sm:px-12 lg:px-16">
+        <div className="mx-auto h-16 w-full px-4 sm:px-8 lg:px-16">
           <div className="flex h-full items-center justify-between gap-6">
             {/* 左側: ロゴ + ナビゲーション */}
             <div className="flex items-center gap-8">

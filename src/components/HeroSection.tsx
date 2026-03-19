@@ -37,43 +37,43 @@ export default function HeroSection({ video }: HeroSectionProps) {
       <div className="absolute inset-0 netflix-gradient-bottom" />
 
       {/* コンテンツ */}
-      <div className="absolute inset-0 flex items-end pb-16 sm:items-center sm:pb-0">
-        <div className="w-full px-4 sm:px-12 lg:px-16">
+      <div className="absolute inset-0 flex items-end pb-8 sm:pb-12 lg:pb-16 sm:items-center sm:pb-0">
+        <div className="w-full px-4 sm:px-8 lg:px-16">
           <div className="max-w-2xl fade-in">
             {/* Netflixロゴ風のシリーズマーク */}
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-primary font-bold text-sm tracking-widest">
+            <div className="flex items-center gap-2 mb-2 sm:mb-3">
+              <span className="text-primary font-bold text-xs sm:text-sm tracking-widest">
                 D
               </span>
-              <span className="text-white/60 text-sm font-medium tracking-wide uppercase">
+              <span className="text-white/60 text-xs sm:text-sm font-medium tracking-wide uppercase">
                 シリーズ
               </span>
             </div>
 
             {/* タイトル */}
-            <h1 className="text-4xl sm:text-5xl lg:text-7xl font-black text-white mb-4 leading-none tracking-tight drop-shadow-2xl">
+            <h1 className="text-3xl sm:text-5xl lg:text-7xl font-black text-white mb-3 sm:mb-4 leading-none tracking-tight drop-shadow-2xl">
               {video.title}
             </h1>
 
             {/* 説明文 */}
-            <p className="text-white/80 text-base sm:text-lg leading-relaxed mb-8 line-clamp-3 max-w-xl drop-shadow-lg">
+            <p className="text-white/80 text-sm sm:text-base lg:text-lg leading-relaxed mb-6 sm:mb-8 line-clamp-2 sm:line-clamp-3 max-w-xl drop-shadow-lg">
               {video.description}
             </p>
 
             {/* CTA ボタン - Netflix風 */}
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-col sm:flex-row sm:flex-wrap items-center gap-3">
               <Link
                 href={`/video/${video.id}`}
-                className="inline-flex items-center gap-2 bg-white hover:bg-white/90 text-black font-bold px-6 sm:px-8 py-2.5 sm:py-3 rounded-md transition-all duration-200 text-base sm:text-lg"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white hover:bg-white/90 text-black font-bold px-6 sm:px-8 py-2.5 sm:py-3 rounded-md transition-all duration-200 text-base sm:text-lg"
               >
-                <Play className="w-6 h-6 sm:w-7 sm:h-7 fill-black" />
+                <Play className="w-5 h-5 sm:w-6 sm:h-6 fill-black" />
                 再生
               </Link>
               <Link
                 href={`/video/${video.id}`}
-                className="inline-flex items-center gap-2 bg-gray-500/70 hover:bg-gray-500/50 text-white font-bold px-6 sm:px-8 py-2.5 sm:py-3 rounded-md transition-all duration-200 text-base sm:text-lg"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-gray-500/70 hover:bg-gray-500/50 text-white font-bold px-6 sm:px-8 py-2.5 sm:py-3 rounded-md transition-all duration-200 text-base sm:text-lg"
               >
-                <Info className="w-6 h-6 sm:w-7 sm:h-7" />
+                <Info className="w-5 h-5 sm:w-6 sm:h-6" />
                 詳細情報
               </Link>
             </div>
