@@ -196,7 +196,7 @@ export default function Header({ authState }: HeaderProps) {
               {/* モバイルメニューボタン */}
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="text-white md:hidden ml-2"
+                className="flex items-center justify-center w-10 h-10 text-white md:hidden ml-1 rounded-md hover:bg-white/10 active:bg-white/20 transition-colors"
                 aria-label={
                   isMobileMenuOpen ? "メニューを閉じる" : "メニューを開く"
                 }

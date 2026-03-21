@@ -28,7 +28,7 @@ export default function VideoCard({ video, isLocked = false }: VideoCardProps) {
     return (
       <Link
         href="/pricing"
-        className="block group relative rounded-md overflow-hidden bg-zinc-900 transition-transform duration-300 hover:scale-105 hover:z-10"
+        className="block group relative rounded-lg overflow-hidden bg-zinc-900 transition-transform duration-300 hover:scale-105 hover:z-10 active:scale-[0.98]"
       >
         {/* サムネイル (ぼかし) */}
         <div className="relative aspect-video overflow-hidden">
@@ -38,7 +38,7 @@ export default function VideoCard({ video, isLocked = false }: VideoCardProps) {
               alt={video.title}
               fill
               loading="lazy"
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
               className="object-cover blur-sm brightness-50"
             />
           ) : (
@@ -47,17 +47,17 @@ export default function VideoCard({ video, isLocked = false }: VideoCardProps) {
 
           {/* ロックオーバーレイ */}
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60">
-            <div className="w-14 h-14 rounded-full bg-zinc-800/90 flex items-center justify-center mb-2 border border-zinc-600">
-              <Lock className="w-6 h-6 text-zinc-400" />
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-zinc-800/90 flex items-center justify-center mb-2 border border-zinc-600">
+              <Lock className="w-5 h-5 sm:w-6 sm:h-6 text-zinc-400" />
             </div>
-            <span className="text-white text-xs font-bold px-3 py-1 rounded-full bg-primary">
+            <span className="text-white text-[11px] sm:text-xs font-bold px-3 py-1 rounded-full bg-primary">
               {tierLabel[tier]}プランに登録
             </span>
           </div>
 
           {/* ティアバッジ */}
           <div
-            className={`absolute top-2 left-2 text-white text-xs font-bold px-2 py-0.5 rounded ${tierColor[tier]}`}
+            className={`absolute top-2 left-2 text-white text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded ${tierColor[tier]}`}
           >
             {tier === "VIP" && <Crown className="w-3 h-3 inline mr-1" />}
             {tierLabel[tier]}
@@ -65,11 +65,11 @@ export default function VideoCard({ video, isLocked = false }: VideoCardProps) {
         </div>
 
         {/* メタ情報 */}
-        <div className="p-2 sm:p-3 bg-zinc-900 group-hover:bg-zinc-800 transition-colors">
-          <h3 className="text-white font-medium text-xs sm:text-sm line-clamp-2 sm:line-clamp-1 leading-tight">
+        <div className="p-2.5 sm:p-3 bg-zinc-900 group-hover:bg-zinc-800 transition-colors">
+          <h3 className="text-white font-medium text-sm sm:text-sm line-clamp-2 leading-snug">
             {video.title}
           </h3>
-          <p className="text-zinc-500 text-xs mt-0.5 line-clamp-1">
+          <p className="text-zinc-500 text-xs mt-1 line-clamp-1">
             アップグレードして視聴
           </p>
         </div>
@@ -80,7 +80,7 @@ export default function VideoCard({ video, isLocked = false }: VideoCardProps) {
   return (
     <Link
       href={`/video/${video.id}`}
-      className="block group relative rounded-md overflow-hidden bg-zinc-900 transition-transform duration-300 hover:scale-105 hover:z-10"
+      className="block group relative rounded-lg overflow-hidden bg-zinc-900 transition-transform duration-300 hover:scale-105 hover:z-10 active:scale-[0.98]"
     >
       {/* サムネイル */}
       <div className="relative aspect-video overflow-hidden">
@@ -90,7 +90,7 @@ export default function VideoCard({ video, isLocked = false }: VideoCardProps) {
             alt={video.title}
             fill
             loading="lazy"
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             className="object-cover"
           />
         ) : (
@@ -101,22 +101,22 @@ export default function VideoCard({ video, isLocked = false }: VideoCardProps) {
           </div>
         )}
 
-        {/* ホバー時のオーバーレイ */}
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-300 flex items-center justify-center sm:opacity-0 sm:group-hover:opacity-100">
-          <div className="w-14 h-14 sm:w-12 sm:h-12 rounded-full bg-white/90 flex items-center justify-center transform sm:scale-75 group-hover:sm:scale-100 transition-transform duration-300">
-            <Play className="w-6 h-6 sm:w-5 sm:h-5 text-black fill-black ml-0.5" />
+        {/* ホバー時のオーバーレイ - モバイルでは常に再生ボタン表示 */}
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-300 flex items-center justify-center">
+          <div className="w-12 h-12 sm:w-11 sm:h-11 rounded-full bg-white/90 flex items-center justify-center transform scale-100 sm:scale-0 group-hover:sm:scale-100 transition-transform duration-300 shadow-lg">
+            <Play className="w-5 h-5 sm:w-5 sm:h-5 text-black fill-black ml-0.5" />
           </div>
         </div>
 
         {/* 再生時間バッジ */}
-        <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs font-medium px-1.5 py-0.5 rounded">
+        <div className="absolute bottom-2 right-2 bg-black/80 text-white text-[10px] sm:text-xs font-medium px-1.5 py-0.5 rounded">
           {formatDuration(video.duration_seconds)}
         </div>
 
         {/* ティアバッジ (NORMAL以外) */}
         {tier !== "NORMAL" && (
           <div
-            className={`absolute top-2 left-2 text-white text-xs font-bold px-2 py-0.5 rounded ${tierColor[tier]}`}
+            className={`absolute top-2 left-2 text-white text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded ${tierColor[tier]}`}
           >
             {tier === "VIP" && <Crown className="w-3 h-3 inline mr-1" />}
             {tierLabel[tier]}
@@ -125,11 +125,11 @@ export default function VideoCard({ video, isLocked = false }: VideoCardProps) {
       </div>
 
       {/* メタ情報 */}
-      <div className="p-2 sm:p-3 bg-zinc-900 group-hover:bg-zinc-800 transition-colors">
-        <h3 className="text-white font-medium text-xs sm:text-sm line-clamp-2 sm:line-clamp-1 leading-tight">
+      <div className="p-2.5 sm:p-3 bg-zinc-900 group-hover:bg-zinc-800 transition-colors">
+        <h3 className="text-white font-medium text-sm sm:text-sm line-clamp-2 leading-snug">
           {video.title}
         </h3>
-        <p className="text-zinc-400 text-xs mt-0.5 line-clamp-1 hidden sm:block">
+        <p className="text-zinc-400 text-xs mt-1 line-clamp-1">
           {video.description}
         </p>
       </div>

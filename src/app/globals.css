@@ -193,3 +193,39 @@ body {
     transparent 100%
   );
 }
+
+/* ============================================================
+   Mobile Optimizations
+   ============================================================ */
+
+/* タッチデバイス向けの最適化 */
+@media (hover: none) and (pointer: coarse) {
+  /* タップ時のハイライトを最小化 */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* スクロールの最適化 */
+  .scrollbar-hide {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* カードホバー効果をタップ時のみに */
+  .card-glow:hover {
+    transform: none;
+    box-shadow: none;
+  }
+
+  .card-glow:active {
+    transform: scale(0.98);
+  }
+}
+
+/* セーフエリア対応 (ノッチ付きデバイス用) */
+@supports (padding: max(0px)) {
+  .safe-area-inset {
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+}

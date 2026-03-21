@@ -66,8 +66,8 @@ export default function GenreSection({
   return (
     <section id={id} className="relative py-4 group/section">
       {/* セクションヘッダー */}
-      <div className="flex items-center gap-2 sm:gap-3 mb-2 px-4 sm:px-8 lg:px-16">
-        <h2 className="text-sm sm:text-lg lg:text-xl font-bold text-white">
+      <div className="flex items-center gap-2 sm:gap-3 mb-3 px-4 sm:px-8 lg:px-16">
+        <h2 className="text-base sm:text-lg lg:text-xl font-bold text-white">
           {genre}
         </h2>
         {requiresUpgrade && (
@@ -79,7 +79,7 @@ export default function GenreSection({
             アップグレード
           </Link>
         )}
-        <ChevronRight className="w-3 sm:w-4 h-3 sm:h-4 text-primary opacity-0 group-hover/section:opacity-100 transition-opacity" />
+        <ChevronRight className="w-4 sm:w-4 h-4 sm:h-4 text-primary opacity-0 group-hover/section:opacity-100 transition-opacity" />
       </div>
 
       {/* 横スクロールカルーセル */}
@@ -88,11 +88,13 @@ export default function GenreSection({
         {showLeftArrow && (
           <button
             onClick={() => scroll("left")}
-            className="absolute left-0 top-0 bottom-0 z-20 w-10 sm:w-12 lg:w-16 bg-gradient-to-r from-black/80 to-transparent flex items-center justify-start pl-1 sm:pl-2 opacity-0 group-hover/section:opacity-100 transition-opacity"
+            className="absolute left-0 top-0 bottom-0 z-20 w-12 sm:w-14 lg:w-16 bg-gradient-to-r from-black/90 to-transparent flex items-center justify-start pl-2 sm:pl-3 opacity-100 sm:opacity-0 sm:group-hover/section:opacity-100 transition-opacity active:scale-95"
             aria-label="前へ"
             type="button"
           >
-            <ChevronLeft className="w-6 sm:w-7 lg:w-8 h-6 sm:h-7 lg:h-8 text-white" />
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-black/60 sm:bg-transparent flex items-center justify-center">
+              <ChevronLeft className="w-5 sm:w-6 lg:w-7 h-5 sm:h-6 lg:h-7 text-white" />
+            </div>
           </button>
         )}
 
@@ -100,18 +102,20 @@ export default function GenreSection({
         {showRightArrow && (
           <button
             onClick={() => scroll("right")}
-            className="absolute right-0 top-0 bottom-0 z-20 w-10 sm:w-12 lg:w-16 bg-gradient-to-l from-black/80 to-transparent flex items-center justify-end pr-1 sm:pr-2 opacity-0 group-hover/section:opacity-100 transition-opacity"
+            className="absolute right-0 top-0 bottom-0 z-20 w-12 sm:w-14 lg:w-16 bg-gradient-to-l from-black/90 to-transparent flex items-center justify-end pr-2 sm:pr-3 opacity-100 sm:opacity-0 sm:group-hover/section:opacity-100 transition-opacity active:scale-95"
             aria-label="次へ"
             type="button"
           >
-            <ChevronRight className="w-6 sm:w-7 lg:w-8 h-6 sm:h-7 lg:h-8 text-white" />
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-black/60 sm:bg-transparent flex items-center justify-center">
+              <ChevronRight className="w-5 sm:w-6 lg:w-7 h-5 sm:h-6 lg:h-7 text-white" />
+            </div>
           </button>
         )}
 
         <div
           ref={scrollContainerRef}
           onScroll={handleScroll}
-          className="flex gap-2 overflow-x-auto scrollbar-hide px-4 sm:px-8 lg:px-16 pb-4"
+          className="flex gap-3 sm:gap-2 overflow-x-auto scrollbar-hide px-4 sm:px-8 lg:px-16 pb-4 snap-x snap-mandatory sm:snap-none"
         >
           {videos.map((video) => {
             const isLocked = !canAccessTier(
@@ -121,7 +125,7 @@ export default function GenreSection({
             return (
               <div
                 key={video.id}
-                className="shrink-0 w-[160px] sm:w-[200px] md:w-[220px] lg:w-[260px]"
+                className="shrink-0 w-[44vw] min-w-[170px] max-w-[200px] sm:min-w-0 sm:max-w-none sm:w-[200px] md:w-[220px] lg:w-[260px] snap-start"
               >
                 <VideoCard video={video} isLocked={isLocked} />
               </div>
